@@ -17,6 +17,10 @@ const socketFactory = (io, http) => {
         console.log(`user ${socket.id} connected`);
         connected[socket.id] = true;
 
+        let emit = (eventName, eventObject) => {
+            socket.emit(eventName, JSON.stringify(eventObject));
+        };
+
         http.getConnections((err, count) => {
             if (!err) {
                 console.log(`Server: ${io.engine.clientsCount}.${count}`);
@@ -33,12 +37,15 @@ const socketFactory = (io, http) => {
                 console.log('user emitted existing hash ' + msg);
 
                 if (pins.hasOwnProperty(msg)) {
-                    socket.emit('pin-data', pins[msg]);
+                    emit('pin-data', pins[msg]);
+                } else {
+                    console.log(`Inconsistent hash ${msg}`);
                 }
             } else {
                 console.log('user emitted new hash '+ msg);
                 hashes.push(msg);
                 pins[msg] = new Donor({hash: msg});
+                emit('pin-data', pins[msg]);
             }
         });
 
@@ -57,7 +64,7 @@ const socketFactory = (io, http) => {
                 locations[socket.id] = new Location(msgData);
             }
 
-            socket.emit('pin-map-update', locations[socket.id].filter(pins));
+            emit('pin-map-update', locations[socket.id].filter(pins));
         });
 
         socket.on('pin-data-upsert', msg => {
@@ -84,7 +91,7 @@ const socketFactory = (io, http) => {
             }
 
             // push to author
-            socket.emit('pin-data', JSON.stringify(pins[msgData.hash]));
+            emit('pin-data', pins[msgData.hash]);
 
             // push to near locations
             Location.findAround(pins[msgData.hash], locations).forEach(socketId => {
@@ -94,12 +101,8 @@ const socketFactory = (io, http) => {
 
         socket.on('get-pin', msg => {
             if (pins.hasOwnProperty(msg)) {
-                socket.emit('pin-info', pins[msg]);
+                emit('pin-info', pins[msg]);
             }
-        });
-
-        socket.on('emit', msg => {
-            console.log('user emitted: ' + msg);
         });
     };
 };

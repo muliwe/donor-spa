@@ -7,7 +7,7 @@ class Donor {
      */
     constructor(data = {}) {
         // @todo add mongo getter
-        this.hash = Math.random().toString();
+        this.hash = data.hash || Math.random().toString();
         this._upsert(data);
     }
 
@@ -25,7 +25,6 @@ class Donor {
      * @private
      */
     _upsert(data = {}) {
-        this.hash = this.hash && this.hash === this.hash ? this.hash : data.hash;
         this.firstName = data.firstName || '';
         this.lastName = data.lastName || '';
         this.phone = data.phone || '';

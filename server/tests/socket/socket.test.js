@@ -11,8 +11,20 @@ const options = {
     'force new connection': true
 };
 
-describe('Sockets', function() {
-    // const client1, client2, client3;
+const SocketTester = require('socket-tester');
+const socketTester = new SocketTester(io, socketUrl, options);
 
-    // testing goodness goes here
+describe('Sockets', function() {
+    it('should receive same hash after connect', function(done){
+        const client = {
+            on: {
+                'pin-data': socketTester.shouldBeCalledWith('{"hash":"12345","firstName":"","lastName":"","phone":"","address":"","lat":null,"long":null,"deleted":false}')
+            },
+            emit: {
+                'hash': '12345'
+            }
+        };
+
+        socketTester.run([client], done);
+    });
 });
