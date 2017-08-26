@@ -83,7 +83,19 @@ const socketFactory = (io, http) => {
                 pins[msgData.hash] = new Donor(msgData);
             }
 
+            // push to author
             socket.emit('pin-data', JSON.stringify(pins[msgData.hash]));
+
+            // push to near locations
+            Location.findAround(pins[msgData.hash], locations).forEach(socketId => {
+                io.sockets.socket(socketId).emit('pin-map-update', locations[socket.id].filter(pins));
+            });
+        });
+
+        socket.on('get-pin', msg => {
+            if (pins.hasOwnProperty(msg)) {
+                socket.emit('pin-info', pins[msg]);
+            }
         });
 
         socket.on('emit', msg => {

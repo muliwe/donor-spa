@@ -70,6 +70,27 @@ class Location {
         // push only new or hidden
         return filteredArray.filter(el => !previouslyShowedPins.includes(el.hash) || el.hide);
     }
+
+    /**
+     * Checks if pin is shown for this location
+     * @param {String} hash to check
+     * @returns {Boolean} if is actual
+     */
+    isShown(hash) {
+        const self = this;
+
+        return self._showedPins.includes(hash);
+    }
+
+    /**
+     * Finds some locations around given
+     * @param {Object} pin given
+     * @param {Object} locations dict
+     * @returns {Array} of socket ids
+     */
+    static findAround(pin = {}, locations = {}) {
+        return Object.keys(locations).filter(hash => locations[hash].isShown(pin.hash));
+    }
 }
 
 module.exports = Location;
