@@ -1,5 +1,5 @@
 const PORT = process.env.PORT;
 
-module.export = {
+module.exports = {
     PORT: PORT || 3001
 };

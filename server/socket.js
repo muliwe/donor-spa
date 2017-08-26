@@ -104,4 +104,4 @@ const socketFactory = (io, http) => {
     };
 };
 
-module.export = socketFactory;
+module.exports = socketFactory;
