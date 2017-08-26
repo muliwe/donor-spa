@@ -15,13 +15,13 @@ const SocketTester = require('socket-tester');
 const socketTester = new SocketTester(io, socketUrl, options);
 
 describe('Sockets', function() {
-    it('should receive same hash after connect', function(done){
+    it('should receive same hash in response data', function(done){
         const client = {
             on: {
                 'pin-data': socketTester.shouldBeCalledWith('{"hash":"12345","firstName":"","lastName":"","phone":"","address":"","lat":null,"long":null,"deleted":false}')
             },
             emit: {
-                'hash': '12345'
+                'hash': 12345
             }
         };
 
