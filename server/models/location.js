@@ -44,25 +44,31 @@ class Location {
         const array = Object.keys(dict).map(hash => dict[hash]);
 
         // hide not actual pins and unneeded data
-        const filteredArray = array.filter(el => el.isActual(self))
+        let filteredArray = array.filter(el => el.isActual(self))
             .map(el => el.stripe());
 
         // convert it to hash array
         const filteredArrayHashes = filteredArray.map(el => el.hash);
 
         // find out what is has to be hidden
-        const hashesToHide = self._showedPins.filter(el => !filteredArrayHashes.includes(el.hash))
-            .map(el => el.hash);
+        const hashesToHide = self._showedPins.filter(hash => !filteredArrayHashes.includes(hash));
 
         // store cloned array
         const previouslyShowedPins = self._showedPins.slice();
 
         // hide elements from hash list
-        filteredArray.forEach(el => {
+        for (let el of filteredArray) {
             if (hashesToHide.includes(el.hash)) {
                 el.hide = true;
             }
-        });
+        }
+
+        // hide outbound pins from the map
+        filteredArray = filteredArray.concat(previouslyShowedPins.filter(hash => !filteredArrayHashes.includes(hash))
+            .map(hash => ({
+                hash,
+                hide: true
+            })));
 
         // re-define pins for good
         self._showedPins = filteredArray.filter(el => !el.hide)

@@ -147,30 +147,50 @@ describe('Sockets', function() {
     });
 
     it('should receive extra pin update due to location on pin upsert', function(done){
+        const client1 = {
+            emit: {
+                'pin-data-upsert': JSON.stringify(data)
+            }
+        };
+
+        const client2 = {
+            on: {
+                'pin-map-update': helpers.hasLength(1)
+            },
+            emit: {
+                'location': JSON.stringify(location)
+            }
+        };
+        socketTester.run([client2, client1], done);
+    });
+
+    it('should receive extra pin updates due to location change', function(done){
         const client1 = io.connect(socketUrl, options);
         let client2;
-        let message;
-        const toUpdate = Object.assign({}, data, {bloodGroup: 'AB+'});
+        const messages = [];
+        const toUpdate = Object.assign({}, data, {bloodGroup: 'B+'});
 
         client1.on('connect', function() {
             client1.emit('location', JSON.stringify(location));
 
             client2 = io.connect(socketUrl, options);
             client2.on('connect', function() {
-                client2.emit('pin-data-upsert', JSON.stringify(toUpdate));
+                client1.emit('location', JSON.stringify(location2));
             });
         });
 
         client1.on('pin-map-update', function(msg) {
-            message = msg;
+            messages.push(msg);
         });
 
         setTimeout(function(){
             client1.disconnect();
             client2.disconnect();
 
-            assert.equal(JSON.parse(message)[0].hash, toUpdate.hash);
-            assert.equal(JSON.parse(message)[0].bloodGroup, 'AB+');
+            assert.equal(JSON.parse(messages[0])[0].bloodGroup, 'A+');
+            assert(!JSON.parse(messages[0])[0].hide);
+            assert(!JSON.parse(messages[1])[0].bloodGroup);
+            assert(JSON.parse(messages[1])[0].hide);
 
             done();
         }, 30);
