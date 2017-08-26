@@ -17,11 +17,14 @@ const socketTester = new SocketTester(io, socketUrl, options);
 const testData = require('../mocks/test-data');
 
 describe('Sockets', function() {
-    it('should receive same hash in response data', function(done){
-        const HASH = 12345;
-        const data = Object.assign({}, testData.emptyPin);
-        data.hash = '' + HASH;
+    const HASH = 12345;
+    const data = Object.assign({}, testData.emptyPin);
+    data.hash = '' + HASH;
+    const data2 = Object.assign({}, testData.filledPin);
+    data2.hash = '' + HASH;
+    const HASH2 = 22222;
 
+    it('should receive same hash in response data', function(done){
         const client = {
             on: {
                 'pin-data': socketTester.shouldBeCalledWith(JSON.stringify(data))
@@ -35,8 +38,6 @@ describe('Sockets', function() {
     });
 
     it('should not receive unknown pin', function(done){
-        const HASH2 = 22222;
-
         const client = {
             on: {
                 'pin-info': socketTester.shouldNotBeCalled()
@@ -50,22 +51,18 @@ describe('Sockets', function() {
     });
 
     it('should receive updated pin data', function(done){
-        const HASH = 12345;
-        const data = Object.assign({}, testData.filledPin);
-        data.hash = '' + HASH;
-
         const client1 = {
             on: {
-                'pin-data': socketTester.shouldBeCalledWith(JSON.stringify(data))
+                'pin-data': socketTester.shouldBeCalledWith(JSON.stringify(data2))
             },
             emit: {
-                'pin-data-upsert': JSON.stringify(data)
+                'pin-data-upsert': JSON.stringify(data2)
             }
         };
 
         const client2 = {
             on: {
-                'pin-info': socketTester.shouldBeCalledWith((JSON.stringify(data)))
+                'pin-info': socketTester.shouldBeCalledWith((JSON.stringify(data2)))
             },
             emit: {
                 'get-pin': HASH
