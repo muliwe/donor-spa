@@ -3,7 +3,7 @@ const http = require('http').Server(app);
 const io = require('socket.io')(http);
 
 const setup = require('./setup');
-const socket = require('./socket')(io, http, Donor);
+const socket = require('./socket')(io, http);
 
 // run socket event listener
 io.on('connection', socket);
