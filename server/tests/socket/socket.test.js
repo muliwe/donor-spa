@@ -59,16 +59,7 @@ describe('Sockets', function() {
                 'pin-data': socketTester.shouldBeCalledWith(JSON.stringify(data))
             },
             emit: {
-                'pin-data-upsert': JSON.stringify({
-                    hash: '12345',
-                    firstName: 'John',
-                    lastName: 'Doe',
-                    phone: '12345678901',
-                    address: 'address',
-                    lat: 1.00,
-                    long: 2.00,
-                    deleted: true
-                })
+                'pin-data-upsert': JSON.stringify(data)
             }
         };
 
