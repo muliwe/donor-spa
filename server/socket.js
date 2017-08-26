@@ -23,7 +23,7 @@ const socketFactory = (io, http) => {
 
         http.getConnections((err, count) => {
             if (!err) {
-                console.log(`Server: ${io.engine.clientsCount}.${count}`);
+                console.log(`Server connections: ${io.engine.clientsCount}(${count})`);
             }
         });
 
@@ -33,19 +33,21 @@ const socketFactory = (io, http) => {
         });
 
         socket.on('hash', msg => {
-            if (hashes.includes(msg)) {
-                console.log('user emitted existing hash ' + msg);
+            const hash = '' + msg;
 
-                if (pins.hasOwnProperty(msg)) {
-                    emit('pin-data', pins[msg]);
+            if (hashes.includes(hash)) {
+                console.log('user emitted existing hash ' + hash);
+
+                if (pins.hasOwnProperty(hash)) {
+                    emit('pin-data', pins[hash]);
                 } else {
-                    console.log(`Inconsistent hash ${msg}`);
+                    console.log(`Inconsistent hash ${hash}`);
                 }
             } else {
-                console.log('user emitted new hash '+ msg);
-                hashes.push(msg);
-                pins[msg] = new Donor({hash: msg});
-                emit('pin-data', pins[msg]);
+                console.log('user emitted new hash '+ hash);
+                hashes.push(hash);
+                pins[hash] = new Donor({hash: hash});
+                emit('pin-data', pins[hash]);
             }
         });
 
@@ -72,6 +74,7 @@ const socketFactory = (io, http) => {
 
             try {
                 msgData = JSON.parse(msg);
+                msgData.hash = '' + msgData.hash;
             } catch (error) {
                 console.error(error);
             }
@@ -100,8 +103,10 @@ const socketFactory = (io, http) => {
         });
 
         socket.on('get-pin', msg => {
-            if (pins.hasOwnProperty(msg)) {
-                emit('pin-info', pins[msg]);
+            const hash = '' + msg;
+
+            if (pins.hasOwnProperty(hash)) {
+                emit('pin-info', pins[hash]);
             }
         });
     };
