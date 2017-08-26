@@ -34,9 +34,10 @@ class Location {
     /**
      * Filters some external model instances list
      * @param {Object} dict to filter
+     * @param {Boolean} ignoreShown force update
      * @returns {Array} filtered list
      */
-    filter(dict = {}) {
+    filter(dict = {}, ignoreShown = false) {
         const self = this;
 
         // convert dict to array
@@ -68,7 +69,7 @@ class Location {
             .map(el => el.hash);
 
         // push only new or hidden
-        return filteredArray.filter(el => !previouslyShowedPins.includes(el.hash) || el.hide);
+        return filteredArray.filter(el => !previouslyShowedPins.includes(el.hash) || el.hide || ignoreShown);
     }
 
     /**

@@ -1,5 +1,6 @@
 const expect = require('chai').expect;
 const io = require('socket.io-client');
+const assert = require('assert');
 
 const app = require('../../../server/server');
 const setup = require('../../../server/setup');
@@ -143,5 +144,35 @@ describe('Sockets', function() {
             }
         };
         socketTester.run([client1, client2], done);
+    });
+
+    it('should receive extra pin update due to location on pin upsert', function(done){
+        const client1 = io.connect(socketUrl, options);
+        let client2;
+        let message;
+        const toUpdate = Object.assign({}, data, {bloodGroup: 'AB+'});
+
+        client1.on('connect', function() {
+            client1.emit('location', JSON.stringify(location));
+
+            client2 = io.connect(socketUrl, options);
+            client2.on('connect', function() {
+                client2.emit('pin-data-upsert', JSON.stringify(toUpdate));
+            });
+        });
+
+        client1.on('pin-map-update', function(msg) {
+            message = msg;
+        });
+
+        setTimeout(function(){
+            client1.disconnect();
+            client2.disconnect();
+
+            assert.equal(JSON.parse(message)[0].hash, toUpdate.hash);
+            assert.equal(JSON.parse(message)[0].bloodGroup, 'AB+');
+
+            done();
+        }, 30);
     });
 });

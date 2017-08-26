@@ -69,7 +69,11 @@ const socketFactory = (io, http) => {
                 locations[socket.id] = new Location(msgData);
             }
 
-            emit('pin-map-update', locations[socket.id].filter(pins));
+            const updatedPins = locations[socket.id].filter(pins);
+
+            if (updatedPins.length) {
+                emit('pin-map-update', updatedPins);
+            }
         });
 
         socket.on('pin-data-upsert', msg => {
@@ -101,11 +105,11 @@ const socketFactory = (io, http) => {
 
             // push to near locations
             Location.findAround(pins[msgData.hash], locations).forEach(socketId => {
-                if (io.sockets.connected[socketId]) {
-                    VERBOSE && console.log(`User ${socketId} location notified updating pins:` +
-                        JSON.stringify(locations[socket.id].filter(pins)));
-                    io.sockets.connected[socketId].emit('pin-map-update',
-                        JSON.stringify(locations[socket.id].filter(pins)));
+                const updatedPins = locations[socketId].filter(pins, true); // ignore shown filter
+
+                if (io.sockets.connected[socketId] && updatedPins.length) {
+                    VERBOSE && console.log(`User ${socketId} location notified updating pins:`, updatedPins);
+                    io.sockets.connected[socketId].emit('pin-map-update', JSON.stringify(updatedPins));
                 }
             });
         });
