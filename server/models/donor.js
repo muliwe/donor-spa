@@ -26,15 +26,15 @@ class Donor {
      * @private
      */
     _upsert(data = {}) {
+        // @todo add validation here
         this.firstName = data.firstName || '';
         this.lastName = data.lastName || '';
         this.phone = data.phone || '';
         this.address = data.address || '';
-        this.bloodGroup = data.bloodGroup; // @todo enum validator
+        this.bloodGroup = data.bloodGroup;
         this.lat = Number(data.lat);
         this.long = Number(data.long);
         this.deleted = !!data.deleted || false;
-
         // @todo add mongo setter
     }
 

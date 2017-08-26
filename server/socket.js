@@ -1,7 +1,7 @@
 const Donor = require('./models/donor');
 const Location = require('./models/location');
 
-const VERBOSE = false;
+const VERBOSE = true;
 
 /**
  * A Factory for Socket event listener
@@ -20,6 +20,7 @@ const socketFactory = (io, http) => {
         connected[socket.id] = true;
 
         let emit = (eventName, eventData) => {
+            VERBOSE && console.log(`Server emitted ${eventName} to client ${socket.id}`);
             socket.emit(eventName, JSON.stringify(eventData));
         };
 
@@ -35,6 +36,9 @@ const socketFactory = (io, http) => {
             delete locations[socket.id];
         });
 
+        /**
+         * Sets client hash
+         */
         socket.on('hash', msg => {
             const hash = '' + (msg || socket.id);
 
@@ -54,6 +58,9 @@ const socketFactory = (io, http) => {
             }
         });
 
+        /**
+         * Sets client location
+         */
         socket.on('location', msg => {
             let msgData = {};
 
@@ -76,6 +83,9 @@ const socketFactory = (io, http) => {
             }
         });
 
+        /**
+         * Upserts client pin
+         */
         socket.on('pin-data-upsert', msg => {
             let msgData = {};
 
@@ -103,17 +113,20 @@ const socketFactory = (io, http) => {
             // push to author
             emit('pin-data', pins[msgData.hash]);
 
-            // push to near locations
+            // notify near locations
             Location.findAround(pins[msgData.hash], locations).forEach(socketId => {
                 const updatedPins = locations[socketId].filter(pins, true); // ignore shown filter
 
                 if (io.sockets.connected[socketId] && updatedPins.length) {
-                    VERBOSE && console.log(`User ${socketId} location notified updating pins:`, updatedPins);
+                    VERBOSE && console.log(`User ${socketId} location notified for updating pins`);
                     io.sockets.connected[socketId].emit('pin-map-update', JSON.stringify(updatedPins));
                 }
             });
         });
 
+        /**
+         * Full pin data getter
+         */
         socket.on('get-pin', msg => {
             const hash = '' + msg;
 
