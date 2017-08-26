@@ -1,6 +1,8 @@
 const Donor = require('./models/donor');
 const Location = require('./models/location');
 
+const VERBOSE = false;
+
 /**
  * A Factory for Socket event listener
  * @param {Object} io Socket.io instance
@@ -14,7 +16,7 @@ const socketFactory = (io, http) => {
     const connected = {};
 
     return socket => {
-        console.log(`user ${socket.id} connected`);
+        VERBOSE && console.log(`user ${socket.id} connected`);
         connected[socket.id] = true;
 
         let emit = (eventName, eventObject) => {
@@ -23,12 +25,12 @@ const socketFactory = (io, http) => {
 
         http.getConnections((err, count) => {
             if (!err) {
-                console.log(`Server connections: ${io.engine.clientsCount}(${count})`);
+                VERBOSE && console.log(`Server connections: ${io.engine.clientsCount}(${count})`);
             }
         });
 
         socket.on('disconnect', () => {
-            console.log(`user ${socket.id} disconnected`);
+            VERBOSE && console.log(`user ${socket.id} disconnected`);
             delete connected[socket.id];
         });
 
@@ -36,15 +38,15 @@ const socketFactory = (io, http) => {
             const hash = '' + msg;
 
             if (hashes.includes(hash)) {
-                console.log('user emitted existing hash ' + hash);
+                VERBOSE && console.log('user emitted existing hash ' + hash);
 
                 if (pins.hasOwnProperty(hash)) {
                     emit('pin-data', pins[hash]);
                 } else {
-                    console.log(`Inconsistent hash ${hash}`);
+                    VERBOSE && console.log(`Inconsistent hash ${hash}`);
                 }
             } else {
-                console.log('user emitted new hash '+ hash);
+                VERBOSE && console.log('user emitted new hash '+ hash);
                 hashes.push(hash);
                 pins[hash] = new Donor({hash: hash});
                 emit('pin-data', pins[hash]);
@@ -80,15 +82,15 @@ const socketFactory = (io, http) => {
             }
 
             if (hashes.includes(msgData.hash)) {
-                console.log('user emitted existing hash pin upsert ' + msgData.hash);
+                VERBOSE && console.log('user emitted existing hash pin upsert ' + msgData.hash);
 
                 if (pins.hasOwnProperty(msgData.hash)) {
                     pins[msgData.hash].update(msgData);
                 } else {
-                    console.log(`Inconsistent hash ${msgData.hash}`);
+                    VERBOSE && console.log(`Inconsistent hash ${msgData.hash}`);
                 }
             } else {
-                console.log('user emitted not existing hash pin upsert ' + msgData.hash);
+                VERBOSE && console.log('user emitted not existing hash pin upsert ' + msgData.hash);
                 hashes.push(msgData.hash);
                 pins[msgData.hash] = new Donor(msgData);
             }
