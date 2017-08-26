@@ -32,6 +32,7 @@ const socketFactory = (io, http) => {
         socket.on('disconnect', () => {
             VERBOSE && console.log(`user ${socket.id} disconnected`);
             delete connected[socket.id];
+            delete locations[socket.id];
         });
 
         socket.on('hash', msg => {
@@ -100,7 +101,12 @@ const socketFactory = (io, http) => {
 
             // push to near locations
             Location.findAround(pins[msgData.hash], locations).forEach(socketId => {
-                io.sockets.socket(socketId).emit('pin-map-update', locations[socket.id].filter(pins));
+                if (io.sockets.connected[socketId]) {
+                    VERBOSE && console.log(`User ${socketId} location notified updating pins:` +
+                        JSON.stringify(locations[socket.id].filter(pins)));
+                    io.sockets.connected[socketId].emit('pin-map-update',
+                        JSON.stringify(locations[socket.id].filter(pins)));
+                }
             });
         });
 

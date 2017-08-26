@@ -24,10 +24,11 @@ describe('Sockets', function() {
     const deletedData = Object.assign({}, testData.filledPin);
     deletedData.hash = '' + HASH;
     const data = Object.assign({}, testData.filledPin);
-    data.hash = '' + HASH;
+    data.hash = '22' + HASH;
     data.deleted = false;
     const HASH2 = 22222;
     const location = Object.assign({}, testData.location);
+    const location2 = Object.assign({}, testData.location2);
 
     it('should receive same hash in response data', function(done){
         const client = {
@@ -93,7 +94,7 @@ describe('Sockets', function() {
     it('should receive empty pin array after location is set', function(done){
         const client = {
             on: {
-                'pin-map-update': socketTester.shouldBeCalledWith(JSON.stringify([]))
+                'pin-map-update': helpers.hasLength(0)
             },
             emit: {
                 'location': JSON.stringify(location)
@@ -102,13 +103,13 @@ describe('Sockets', function() {
         socketTester.run([client], done);
     });
 
-    it('should receive pin array after location and pin are set', function(done){
+    it('should receive only 1 proper pin or 3 after location and pin are set', function(done){
         const client1 = {
             on: {
-                'pin-data': socketTester.shouldBeCalledWith(JSON.stringify(deletedData))
+                'pin-data': socketTester.shouldBeCalledWith(JSON.stringify(data))
             },
             emit: {
-                'pin-data-upsert': JSON.stringify(deletedData)
+                'pin-data-upsert': JSON.stringify(data)
             }
         };
 
@@ -118,6 +119,27 @@ describe('Sockets', function() {
             },
             emit: {
                 'location': JSON.stringify(location)
+            }
+        };
+        socketTester.run([client1, client2], done);
+    });
+
+    it('should no receive pin for wrong location', function(done){
+        const client1 = {
+            on: {
+                'pin-data': socketTester.shouldBeCalledWith(JSON.stringify(data))
+            },
+            emit: {
+                'pin-data-upsert': JSON.stringify(data)
+            }
+        };
+
+        const client2 = {
+            on: {
+                'pin-map-update': helpers.hasLength(0)
+            },
+            emit: {
+                'location': JSON.stringify(location2)
             }
         };
         socketTester.run([client1, client2], done);

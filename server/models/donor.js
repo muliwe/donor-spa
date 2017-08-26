@@ -8,6 +8,7 @@ class Donor {
     constructor(data = {}) {
         // @todo add mongo getter
         this.hash = ''+ data.hash || Math.random().toString();
+        // @todo secret hash
         this._upsert(data);
     }
 
@@ -29,7 +30,7 @@ class Donor {
         this.lastName = data.lastName || '';
         this.phone = data.phone || '';
         this.address = data.address || '';
-        this.bloodGroup = data.bloodGroup;
+        this.bloodGroup = data.bloodGroup; // @todo enum validator
         this.lat = Number(data.lat);
         this.long = Number(data.long);
         this.deleted = !!data.deleted || false;
