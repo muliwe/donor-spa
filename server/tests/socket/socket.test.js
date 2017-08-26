@@ -14,23 +14,41 @@ const options = {
 const SocketTester = require('socket-tester');
 const socketTester = new SocketTester(io, socketUrl, options);
 
+const helpers = require('../helpers');
 const testData = require('../mocks/test-data');
 
 describe('Sockets', function() {
     const HASH = 12345;
-    const data = Object.assign({}, testData.emptyPin);
+    const emptyData = Object.assign({}, testData.emptyPin);
+    emptyData.hash = '' + HASH;
+    const deletedData = Object.assign({}, testData.filledPin);
+    deletedData.hash = '' + HASH;
+    const data = Object.assign({}, testData.filledPin);
     data.hash = '' + HASH;
-    const data2 = Object.assign({}, testData.filledPin);
-    data2.hash = '' + HASH;
+    data.deleted = false;
     const HASH2 = 22222;
+    const location = Object.assign({}, testData.location);
 
     it('should receive same hash in response data', function(done){
         const client = {
             on: {
-                'pin-data': socketTester.shouldBeCalledWith(JSON.stringify(data))
+                'pin-data': socketTester.shouldBeCalledWith(JSON.stringify(emptyData))
             },
             emit: {
                 'hash': HASH
+            }
+        };
+
+        socketTester.run([client], done);
+    });
+
+    it('should receive hash on undefined', function(done){
+        const client = {
+            on: {
+                'pin-data': helpers.definedProperty('hash')
+            },
+            emit: {
+                'hash': undefined
             }
         };
 
@@ -53,22 +71,55 @@ describe('Sockets', function() {
     it('should receive updated pin data', function(done){
         const client1 = {
             on: {
-                'pin-data': socketTester.shouldBeCalledWith(JSON.stringify(data2))
+                'pin-data': socketTester.shouldBeCalledWith(JSON.stringify(deletedData))
             },
             emit: {
-                'pin-data-upsert': JSON.stringify(data2)
+                'pin-data-upsert': JSON.stringify(deletedData)
             }
         };
 
         const client2 = {
             on: {
-                'pin-info': socketTester.shouldBeCalledWith((JSON.stringify(data2)))
+                'pin-info': socketTester.shouldBeCalledWith((JSON.stringify(deletedData)))
             },
             emit: {
                 'get-pin': HASH
             }
         };
 
+        socketTester.run([client1, client2], done);
+    });
+
+    it('should receive empty pin array after location is set', function(done){
+        const client = {
+            on: {
+                'pin-map-update': socketTester.shouldBeCalledWith(JSON.stringify([]))
+            },
+            emit: {
+                'location': JSON.stringify(location)
+            }
+        };
+        socketTester.run([client], done);
+    });
+
+    it('should receive pin array after location and pin are set', function(done){
+        const client1 = {
+            on: {
+                'pin-data': socketTester.shouldBeCalledWith(JSON.stringify(deletedData))
+            },
+            emit: {
+                'pin-data-upsert': JSON.stringify(deletedData)
+            }
+        };
+
+        const client2 = {
+            on: {
+                'pin-map-update': helpers.hasLength(1)
+            },
+            emit: {
+                'location': JSON.stringify(location)
+            }
+        };
         socketTester.run([client1, client2], done);
     });
 });

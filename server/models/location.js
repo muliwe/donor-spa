@@ -7,7 +7,7 @@ class Location {
      */
     constructor(geodata) {
         this._showedPins = [];
-        this._upsert(data);
+        this._upsert(geodata);
     }
 
     /**

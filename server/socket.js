@@ -19,8 +19,8 @@ const socketFactory = (io, http) => {
         VERBOSE && console.log(`user ${socket.id} connected`);
         connected[socket.id] = true;
 
-        let emit = (eventName, eventObject) => {
-            socket.emit(eventName, JSON.stringify(eventObject));
+        let emit = (eventName, eventData) => {
+            socket.emit(eventName, JSON.stringify(eventData));
         };
 
         http.getConnections((err, count) => {
@@ -35,7 +35,7 @@ const socketFactory = (io, http) => {
         });
 
         socket.on('hash', msg => {
-            const hash = '' + msg;
+            const hash = '' + (msg || socket.id);
 
             if (hashes.includes(hash)) {
                 VERBOSE && console.log('user emitted existing hash ' + hash);

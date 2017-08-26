@@ -20,7 +20,15 @@ const filledPin = {
     deleted: true
 };
 
+const location = {
+    fromLat: 0.00,
+    fromLong: 0.00,
+    toLat: 2.00,
+    toLong: 3.00
+};
+
 module.exports = {
     emptyPin,
-    filledPin
+    filledPin,
+    location
 };
