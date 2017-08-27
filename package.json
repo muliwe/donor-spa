@@ -2,6 +2,7 @@
   "name": "donor-spa",
   "version": "0.0.1",
   "private": true,
+  "main": "server/server",
   "scripts": {
     "start": "node ./server/server",
     "pretest": "eslint --quiet .",
