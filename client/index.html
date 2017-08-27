@@ -148,29 +148,12 @@
         var graphic;
         var currLocation;
         var watchId;
-        var pins = [{
-            hash: 'vtkSXDx8LWX49JDJAAAC',
-            lat: 55.5,
-            long: 37.7,
-            bloodGroup: 'A+',
-            hide: false
-        }, {
-            hash: 'm8LOxUGe7RQ8V7R4AAAG',
-            lat: 55.7,
-            long: 37.7,
-            bloodGroup: 'AB-',
-            hide: false
-        }, {
-            hash: '22222',
-            lat: 55.6,
-            long: 37.7,
-            bloodGroup: 'AB-',
-            hide: true
-        }];
+        var pins = [];
         var selectedPin;
         var hash = (window.location.hash ? window.location.hash.substring(1) : undefined);
         var socket;
         var extent;
+        var showpins = function () {};
 
         function pinInfo(pinHash) {
             socket.emit('get-pin', pinHash);
@@ -246,11 +229,21 @@
                         '<div><span>Address:</span> ' + msgData.address + '</div>' +
                         '<div><span>Phone:</span> <b>' + msgData.phone + '</b></div>';
 
-                map.infoWindow.setContent(msgData.deleted ? 'Donor info is deleted' : content);
+                map.infoWindow.setContent(msgData.deleted ? 'Sorry! Donor info was deleted' : content);
             }
 
             function onPinMapUpdate(msg) {
                 console.log('Pin map update: ', msg);
+
+                var msgData;
+
+                try {
+                    msgData = JSON.parse(msg);
+                } catch (error) {
+                    console.error(error);
+                }
+                pins = msgData;
+                showPins();
             }
 
             function onPinData(msg) {
@@ -320,7 +313,6 @@
             map.on("click", function (evt) {
                 if (evt.graphic) {
                     swapPins(evt);
-
                 } else {
                     console.log(evt.mapPoint.getLatitude(), evt.mapPoint.getLongitude());
                     showLocation({
@@ -375,7 +367,7 @@
                     console.log('Browser doesn\'t support Geolocation.');
                 }
 
-                showPins(function () {return true;});
+                showPins();
             }
 
             function locationError(error) {
@@ -467,6 +459,7 @@
                 var pt = new Point(location.coords.longitude, location.coords.latitude);
                 addGraphic(pt);
                 map.centerAndZoom(pt, 12);
+                getPinsForExtent(map);
             }
 
             function showLocation(location) {
@@ -504,10 +497,10 @@
                 locator.locationToAddress(pt, 100);
             }
 
-            function showPins(filter) {
+            showPins = function() {
                 pins.filter(function(pin) {
                     return !pin.hide;
-                }).filter(filter).forEach(function(pin) {
+                }).forEach(function(pin) {
                     var symbol = symbolGenerator();
                     var graphic = new Graphic(new Point(pin.long, pin.lat), symbol, {}, infoTemplate);
 
@@ -518,7 +511,7 @@
 
                     map.graphics.add(graphic);
                 });
-            }
+            };
 
             function symbolGenerator(isSelected) {
                 return new SimpleMarkerSymbol(
