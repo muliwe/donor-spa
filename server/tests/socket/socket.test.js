@@ -125,7 +125,7 @@ describe('Sockets', function() {
         socketTester.run([client1, client2], done);
     });
 
-    it('should no receive pin for wrong location', function(done){
+    it('should not receive pin for wrong location', function(done){
         const client1 = {
             on: {
                 'pin-data': socketTester.shouldBeCalledWith(JSON.stringify(data))

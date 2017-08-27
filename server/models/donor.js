@@ -51,6 +51,7 @@ class Donor {
         const self = this;
 
         return !self.deleted &&
+            this.firstName && this.lastName && this.phone && this.address && this.bloodGroup &&
             Number(self.lat) && Number(self.long) &&
             self.lat >= location.fromLat && self.lat <= location.toLat &&
             self.long >= location.fromLong && self.long <= location.toLong;

@@ -51,7 +51,8 @@ class Location {
         const filteredArrayHashes = filteredArray.map(el => el.hash);
 
         // find out what is has to be hidden
-        const hashesToHide = self._showedPins.filter(hash => !filteredArrayHashes.includes(hash));
+        const hashesToHide = (ignoreShown ? Object.keys(dict) : self._showedPins)
+            .filter(hash => !filteredArrayHashes.includes(hash));
 
         // store cloned array
         const previouslyShowedPins = self._showedPins.slice();
@@ -63,12 +64,23 @@ class Location {
             }
         }
 
-        // hide outbound pins from the map
-        filteredArray = filteredArray.concat(previouslyShowedPins.filter(hash => !filteredArrayHashes.includes(hash))
-            .map(hash => ({
-                hash,
-                hide: true
-            })));
+        if (!ignoreShown) {
+            // hide outbound pins from the map
+            filteredArray = filteredArray
+                .concat(previouslyShowedPins.filter(hash => !filteredArrayHashes.includes(hash))
+                    .map(hash => ({
+                        hash,
+                        hide: true
+                    }))
+                );
+        } else {
+            // may be we just deleted an item
+            filteredArray = filteredArray
+                .concat(hashesToHide.map(hash => ({
+                    hash,
+                    hide: true
+                })));
+        }
 
         // re-define pins for good
         self._showedPins = filteredArray.filter(el => !el.hide)
@@ -90,13 +102,26 @@ class Location {
     }
 
     /**
+     * Checks if pin should be shown for this location
+     * @param {Object} pin to check
+     * @returns {Boolean} if is actual
+     */
+    isContaining(pin) {
+        const self = this;
+
+        return pin.lat >= self.fromLat && pin.lat <= self.toLat &&
+            pin.long >= self.fromLong && pin.long <= self.toLong;
+    }
+
+    /**
      * Finds some locations around given
      * @param {Object} pin given
      * @param {Object} locations dict
      * @returns {Array} of socket ids
      */
     static findAround(pin = {}, locations = {}) {
-        return Object.keys(locations).filter(hash => locations[hash].isShown(pin.hash));
+        return Object.keys(locations)
+            .filter(hash => locations[hash].isShown(pin.hash) || locations[hash].isContaining(pin));
     }
 }
 

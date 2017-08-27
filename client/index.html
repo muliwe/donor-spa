@@ -155,10 +155,6 @@
         var extent;
         var showpins = function () {};
 
-        function pinInfo(pinHash) {
-            socket.emit('get-pin', pinHash);
-        }
-
         function submit(toDelete) {
             var e = document.getElementById('bloodGroup');
             var bloodGroup = e.options[e.selectedIndex].value;
@@ -174,6 +170,36 @@
                  long: graphic.geometry.x,
                  deleted: !!toDelete
              }));
+        }
+
+        function patchPins(pinsData) {
+            if (Array.isArray(pinsData)) {
+                var pinsHash = {};
+
+                pinsData.forEach(function(pin) {
+                    pinsHash[pin.hash] = pin;
+                });
+
+                for (var i=0; i < pins.length; i++) {
+                   if (pinsHash[pins[i].hash]) {
+                       if (pins[i].graphic) {
+                           this.map.graphics.remove(pins[i].graphic);
+                       }
+
+                       pins[i] = Object.assign({}, pinsHash[pins[i].hash]);
+                   }
+
+                   delete pinsHash[pins[i].hash];
+                }
+
+                Object.keys(pinsHash).forEach(function(hash) {
+                    pins.push(pinsHash[hash]);
+                });
+            }
+        }
+
+        function pinInfo(pinHash) {
+            socket.emit('get-pin', pinHash);
         }
 
         function socketHandler() {
@@ -202,6 +228,10 @@
                         toLong: extent[1][0]
                     }));
                     extent = undefined;
+                }
+
+                if (extent) {
+                    getPinsForExtent(map);
                 }
             }
 
@@ -242,7 +272,8 @@
                 } catch (error) {
                     console.error(error);
                 }
-                pins = msgData;
+
+                patchPins(msgData);
                 showPins();
             }
 
@@ -258,6 +289,8 @@
 
                 hash = msgData.hash;
 
+                location.replace('/#' + hash);
+
                 if (msgData.deleted) {
                     document.getElementById('firstName').value = '';
                     document.getElementById('lastName').value = '';
@@ -268,14 +301,12 @@
                     document.getElementById('lastName').value = msgData.lastName;
                     document.getElementById('phone').value = msgData.phone;
                     document.getElementById('address').value = msgData.address;
+                    document.getElementById('bloodGroup').value = msgData.bloodGroup;
                     document.getElementById('result').innerHTML =
-                            'You data is saved! Secret link to edit or delete your data is <a href="/#' + hash
-                            + '">/#' + hash + '</a>';
+                            'You data is saved! Secret link to edit or delete your data is in your address bar now';
                 }
             }
         }
-
-        window.addEventListener('load', socketHandler, false);
 
         require([
             "esri/map", "esri/geometry/Point", "esri/symbols/TextSymbol", "esri/symbols/Font", "esri/tasks/locator",
@@ -352,13 +383,15 @@
             }
 
             function orientationChanged() {
-                if(map){
+                if (map){
                     map.reposition();
                     map.resize();
                 }
             }
 
             function initFunc(map) {
+                socketHandler();
+
                 if( navigator.geolocation ) {
                     navigator.geolocation.getCurrentPosition(zoomToLocation, locationError);
                     // disable tracking for a while
@@ -366,8 +399,6 @@
                 } else {
                     console.log('Browser doesn\'t support Geolocation.');
                 }
-
-                showPins();
             }
 
             function locationError(error) {
@@ -499,7 +530,7 @@
 
             showPins = function() {
                 pins.filter(function(pin) {
-                    return !pin.hide;
+                    return !pin.hide && !pin.showed && !pin.graphic;
                 }).forEach(function(pin) {
                     var symbol = symbolGenerator();
                     var graphic = new Graphic(new Point(pin.long, pin.lat), symbol, {}, infoTemplate);

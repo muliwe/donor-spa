@@ -1,7 +1,7 @@
 const Donor = require('./models/donor');
 const Location = require('./models/location');
 
-const VERBOSE = true;
+const VERBOSE = false;
 
 /**
  * A Factory for Socket event listener
@@ -117,7 +117,8 @@ const socketFactory = (io, http) => {
 
             // notify near locations
             Location.findAround(pins[msgData.hash], locations).forEach(socketId => {
-                const updatedPins = locations[socketId].filter(pins, true); // ignore shown filter
+                const updatedPins = locations[socketId].filter({[msgData.hash]: pins[msgData.hash]},
+                    true); // ignore shown
 
                 if (io.sockets.connected[socketId] && updatedPins.length) {
                     VERBOSE && console.log(`User ${socketId} location notified for updating pins`);
