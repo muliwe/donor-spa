@@ -76,6 +76,8 @@ const socketFactory = (io, http) => {
                 locations[socket.id] = new Location(msgData);
             }
 
+            VERBOSE && console.log(`User emitted location: ${msg}`);
+
             const updatedPins = locations[socket.id].filter(pins);
 
             if (updatedPins.length) {

@@ -32,6 +32,13 @@
             left: 74px;
         }
 
+        #LocateButton {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            z-index: 50;
+        }
+
         #cart {
             position: absolute;
             top: 5%;
@@ -65,12 +72,14 @@
             padding: 5px;
         }
 
-        div.selected {
-            background-color: rgba(255, 255, 255, 1) !important;
+        #cart input {
+            width: 90%;
         }
 
-        #info {
-            display: none;
+        #address {
+            width: 90%;
+            height: 132px;
+            resize: none;
         }
 
         @-webkit-keyframes
@@ -122,6 +131,10 @@
         #map_graphics_layer circle[fill-opacity='0.9'] {
             opacity: .50;
         }
+
+        #map_graphics_layer path {
+            opacity: 0;
+        }
     </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.3/socket.io.js"></script>
 
@@ -132,13 +145,13 @@
         var currLocation;
         var watchId;
         var pins = [{
-            hash: '12345',
+            hash: 'vtkSXDx8LWX49JDJAAAC',
             lat: 55.5,
             long: 37.7,
             bloodGroup: 'A+',
             hide: false
         }, {
-            hash: '22222',
+            hash: 'm8LOxUGe7RQ8V7R4AAAG',
             lat: 55.7,
             long: 37.7,
             bloodGroup: 'AB-',
@@ -152,9 +165,33 @@
         }];
         var selectedPin;
         var hash;
+        var socket;
+        var extent;
 
-        function socket() {
-            var socket = io('http://localhost:3000/');
+        function pinInfo(pinHash) {
+            socket.emit('get-pin', pinHash);
+        }
+
+        function submit() {
+            var e = document.getElementById('bloodGroup');
+            var bloodGroup = e.options[e.selectedIndex].value;
+
+             socket.emit('pin-data-upsert', JSON.stringify({
+                 hash: hash,
+                 firstName: document.getElementById('firstName').value,
+                 lastName: document.getElementById('lastName').value,
+                 phone: document.getElementById('phone').value,
+                 address: document.getElementById('address').value,
+                 bloodGroup: bloodGroup,
+                 lat: graphic.geometry.y,
+                 long: graphic.geometry.x,
+                 deleted: false
+             }));
+        }
+
+        function socketHandler() {
+            socket = io('http://localhost:3000/');
+
             socket.on('connect', onConnect);
             socket.on('disconnect', onDisconnect);
             socket.on('connect_error', onError);
@@ -169,14 +206,16 @@
 
                 socket.emit('hash', hash);
 
-                socket.emit('location', JSON.stringify({
-                    fromLat: 55,
-                    fromLong: 37,
-                    toLat: 56,
-                    toLong: 38
-                }));
-
-                socket.emit('get-pin', hash);
+                if (extent) {
+                    console.log(extent);
+                    socket.emit('location', JSON.stringify({
+                        fromLat: extent[0][1],
+                        fromLong: extent[0][0],
+                        toLat: extent[1][1],
+                        toLong: extent[1][0]
+                    }));
+                    extent = undefined;
+                }
             }
 
             function onDisconnect(evt) {
@@ -189,6 +228,21 @@
 
             function onPinInfo(msg) {
                 console.log('Pin info: ', msg);
+
+                var msgData;
+
+                try {
+                    msgData = JSON.parse(msg);
+                } catch (error) {
+                    console.error(error);
+                }
+
+                var content = '<div><span>Blood Group:</span> <b>' + msgData.bloodGroup + '</b></div>' +
+                        '<div><span>Name:</span> <b>' + msgData.firstName + ' ' + msgData.lastName + '</b></div>' +
+                        '<div><span>Address:</span> ' + msgData.address + '</div>' +
+                        '<div><span>Phone:</span> <b>' + msgData.phone + '</b></div>';
+
+                map.infoWindow.setContent(msgData.deleted ? 'Donor info is deleted' : content);
             }
 
             function onPinMapUpdate(msg) {
@@ -206,102 +260,85 @@
                 }
 
                 hash = msgData.hash;
-
-                /*
-                socket.emit('pin-data-upsert', JSON.stringify({
-                    hash: hash,
-                    firstName: 'John',
-                    lastName: 'Doe',
-                    phone: '12345678901',
-                    address: 'address',
-                    bloodGroup: 'A+',
-                    lat: graphic.geometry.y,
-                    long: graphic.geometry.x,
-                    deleted: false
-                }));
-                */
             }
         }
 
-        window.addEventListener('load', socket, false);
+        window.addEventListener('load', socketHandler, false);
 
         require([
-            "esri/map", "esri/geometry/Point", "esri/symbols/TextSymbol", "esri/symbols/Font",
-            "esri/symbols/SimpleMarkerSymbol", "esri/symbols/SimpleLineSymbol",
-            "esri/graphic", "esri/Color", "esri/dijit/Search", "dojo/domReady!"
+            "esri/map", "esri/geometry/Point", "esri/symbols/TextSymbol", "esri/symbols/Font", "esri/tasks/locator",
+            "esri/symbols/SimpleMarkerSymbol", "esri/symbols/SimpleLineSymbol", "esri/geometry/webMercatorUtils",
+            "esri/graphic", "esri/Color", "esri/InfoTemplate", "esri/dijit/Search", "esri/dijit/LocateButton",
+            "dojo/domReady!"
         ], function(
-                Map, Point, TextSymbol, Font,
-                SimpleMarkerSymbol, SimpleLineSymbol,
-                Graphic, Color, Search
+                Map, Point, TextSymbol, Font, Locator,
+                SimpleMarkerSymbol, SimpleLineSymbol, webMercatorUtils,
+                Graphic, Color, InfoTemplate, Search, LocateButton
         ) {
             map = new Map("map", {
-                basemap: "oceans",
+                basemap: "streets",
                 center: [-122.144, 37.468],
                 zoom: 8
             });
             map.on("load", initFunc);
+            map.on("extent-change", getPinsForExtent);
 
             var search = new Search({
                 map: map
             }, "search");
             search.startup();
 
+            var geoLocate = new LocateButton({
+                map: map
+            }, "LocateButton");
+            geoLocate.startup();
+
+            var infoTemplate = new InfoTemplate('Blood Donor', 'Blood Group: <b>${bloodGroup}</b><br>' +
+                    '<a onclick="pinInfo(\'${hash}\'); return false;" href="#"">Click for more info</a>');
+
+            var locator = new Locator("https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer");
 
             map.on("click", function (evt) {
                 if (evt.graphic) {
-                    console.log(evt.graphic.attributes);
-                    if (selectedPin && !evt.graphic.attributes.selected) {
-                        // switch selected
-                        var pin = evt.graphic.attributes;
-                        var pin2 = selectedPin.attributes;
+                    swapPins(evt);
 
-                        var symbol = symbolGenerator();
-                        var graphic = new Graphic(new Point(pin2.long, pin2.lat), symbol);
-                        pin2.graphic = graphic;
-                        pin2.showed = true;
-                        pin2.selected = false;
-                        graphic.setAttributes(pin2);
-
-                        var selectedSymbol = symbolGenerator(true);
-                        var graphic2 = new Graphic(new Point(pin.long, pin.lat), selectedSymbol);
-                        pin.graphic = graphic;
-                        pin.showed = true;
-                        pin.selected = true;
-                        graphic2.setAttributes(pin);
-
-                        map.graphics.remove(evt.graphic);
-                        map.graphics.remove(selectedPin);
-
-                        map.graphics.add(graphic);
-                        map.graphics.add(graphic2);
-
-                        selectedPin = graphic2;
-                    } else if (!selectedPin) {
-                        // mark selected
-                        var pin = evt.graphic.attributes;
-
-                        var selectedSymbol = symbolGenerator(true);
-                        var graphic = new Graphic(new Point(pin.long, pin.lat), selectedSymbol);
-                        pin.graphic = graphic;
-                        pin.showed = true;
-                        pin.selected = true;
-                        graphic.setAttributes(pin);
-
-                        map.graphics.remove(evt.graphic);
-                        map.graphics.remove(selectedPin);
-
-                        map.graphics.add(graphic);
-
-                        selectedPin = graphic;
-                    }
-                    console.log(selectedPin.attributes);
-                    if (selectedPin) {
-                        var info = document.getElementById('info');
-                        info.innerHTML = '<div>Blood Group: <b>' + selectedPin.attributes.bloodGroup + '</b></div>';
-                        info.style.display = 'block';
-                    }
+                } else {
+                    console.log(evt.mapPoint.getLatitude(), evt.mapPoint.getLongitude());
+                    showLocation({
+                        coords: {
+                            latitude: evt.mapPoint.getLatitude(),
+                            longitude: evt.mapPoint.getLongitude()
+                        }
+                    });
+                    locator.locationToAddress(webMercatorUtils.webMercatorToGeographic(evt.mapPoint), 100);
                 }
             });
+
+            locator.on("location-to-address-complete", function(evt) {
+                if (evt.address.address) {
+                    var address = evt.address.address.LongLabel;
+                    document.getElementById('address').value = address;
+                }
+            });
+
+            function getPinsForExtent(extent) {
+                var min = webMercatorUtils.xyToLngLat(extent.extent.xmin.toFixed(3),
+                        extent.extent.ymin.toFixed(3), true);
+                var max = webMercatorUtils.xyToLngLat(extent.extent.xmax.toFixed(3),
+                        extent.extent.ymax.toFixed(3), true);
+
+                if (!socket || !socket.connected) {
+                    extent = [min, max];
+                    return;
+                }
+
+                socket.emit('location', JSON.stringify({
+                    fromLat: min[1],
+                    fromLong: min[0],
+                    toLat: max[1],
+                    toLong: max[0]
+                }));
+            }
 
             function orientationChanged() {
                 if(map){
@@ -313,7 +350,8 @@
             function initFunc(map) {
                 if( navigator.geolocation ) {
                     navigator.geolocation.getCurrentPosition(zoomToLocation, locationError);
-                    watchId = navigator.geolocation.watchPosition(showLocation, locationError);
+                    // disable tracking for a while
+                    // watchId = navigator.geolocation.watchPosition(showLocation, locationError);
                 } else {
                     console.log('Browser doesn\'t support Geolocation.');
                 }
@@ -343,6 +381,64 @@
                         console.log('unknown error');
                         break;
                 }
+            }
+
+            function swapPins(evt) {
+                console.log(evt.graphic.attributes);
+
+                if (selectedPin && evt.graphic.attributes && !evt.graphic.attributes.selected) {
+                    map.infoWindow.hide();
+
+                    // switch selected
+                    var pin = evt.graphic.attributes;
+                    var pin2 = selectedPin.attributes;
+
+                    var symbol = symbolGenerator();
+                    var graphic = new Graphic(new Point(pin2.long, pin2.lat), symbol);
+                    pin2.graphic = graphic;
+                    pin2.showed = true;
+                    pin2.selected = false;
+                    graphic.setAttributes(pin2);
+
+                    var selectedSymbol = symbolGenerator(true);
+                    var graphic2 = new Graphic(new Point(pin.long, pin.lat), selectedSymbol);
+                    pin.graphic = graphic;
+                    pin.showed = true;
+                    pin.selected = true;
+                    graphic2.setAttributes(pin);
+
+                    map.graphics.remove(evt.graphic);
+                    map.graphics.remove(selectedPin);
+
+                    map.graphics.add(graphic);
+                    map.graphics.add(graphic2);
+
+                    selectedPin = graphic2;
+
+                    map.infoWindow.setContent('Blood Group: <b>' + selectedPin.attributes.bloodGroup + '</b><br>' +
+                            '<a onclick="pinInfo(\'' + selectedPin.attributes.hash + '\'); return false;" href="#">' +
+                            'Click for more info</a>');
+                    map.infoWindow.show(new Point(pin.long, pin.lat), selectedSymbol);
+
+                } else if (!selectedPin) {
+                    // mark selected
+                    var pin = evt.graphic.attributes;
+
+                    var selectedSymbol = symbolGenerator(true);
+                    var graphic = new Graphic(new Point(pin.long, pin.lat), selectedSymbol);
+                    pin.graphic = graphic;
+                    pin.showed = true;
+                    pin.selected = true;
+                    graphic.setAttributes(pin);
+
+                    map.graphics.remove(evt.graphic);
+                    map.graphics.remove(selectedPin);
+
+                    map.graphics.add(graphic);
+
+                    selectedPin = graphic;
+                }
+                console.log(selectedPin.attributes);
             }
 
             function zoomToLocation(location) {
@@ -386,6 +482,7 @@
                 );
                 graphic = new Graphic(pt, symbol);
                 map.graphics.add(graphic);
+                locator.locationToAddress(pt, 100);
             }
 
             function showPins(filter) {
@@ -393,7 +490,7 @@
                     return !pin.hide;
                 }).filter(filter).forEach(function(pin) {
                     var symbol = symbolGenerator();
-                    var graphic = new Graphic(new Point(pin.long, pin.lat), symbol);
+                    var graphic = new Graphic(new Point(pin.long, pin.lat), symbol, {}, infoTemplate);
 
                     pin.graphic = graphic;
                     pin.showed = true;
@@ -422,32 +519,27 @@
 
 <body onorientationchange="orientationChanged();">
 <div id="search"></div>
-<div id="map"></div>
+<div id="map">
+    <div id="LocateButton"></div>
+</div>
 <div id="cart">
     <div id="donate">
         <div class="red">For the Donors</div>
         <div id="donate-form">
-            <span>First Name</span> <input type="text" placeholder="">
-            <span>Last Name</span> <input type="text" placeholder="">
-            <span>Phone</span> <input type="text" placeholder="+15550000000">
-            <span>Address</span> <input type="text" placeholder="">
+            <span>First Name</span> <input id="firstName" type="text" placeholder="">
+            <span>Last Name</span> <input id="lastName" type="text" placeholder="">
+            <span>Phone</span> <input id="phone" type="text" placeholder="+15550000000">
+            <span>Address</span> <textarea id="address"></textarea>
             <span>Blood Type</span>
-            <select>
+            <select id="bloodGroup">
                 <option>0</option>
                 <option>A</option>
                 <option>B</option>
                 <option>AB</option>
             </select>
         </div>
-        <div class="red">Submit</div>
+        <div class="red" onclick="submit();">Submit</div>
     </div>
-    <!--div id="filter">
-        <div onclick="filterPins('all');" class="selected">All Blood Types</div>
-        <div onclick="filterPins('0');">Donors for 0 Group</div>
-        <div onclick="filterPins('A');">Donors for A Group</div>
-        <div onclick="filterPins('B');">Donors for B Group</div>
-    </div-->
-    <div id="info"></div>
 </div>div>
 </body>
 
