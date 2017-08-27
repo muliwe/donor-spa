@@ -53,7 +53,7 @@ const socketFactory = (io, http) => {
             } else {
                 VERBOSE && console.log('user emitted new hash '+ hash);
                 hashes.push(hash);
-                pins[hash] = new Donor({hash: hash});
+                pins[hash] = new Donor({hash: hash}, socket.handshake.address.address);
                 emit('pin-data', pins[hash]);
             }
         });
@@ -100,14 +100,14 @@ const socketFactory = (io, http) => {
                 VERBOSE && console.log('user emitted existing hash pin upsert ' + msgData.hash);
 
                 if (pins.hasOwnProperty(msgData.hash)) {
-                    pins[msgData.hash].update(msgData);
+                    pins[msgData.hash].update(msgData, socket.handshake.address.address);
                 } else {
                     VERBOSE && console.log(`Inconsistent hash ${msgData.hash}`);
                 }
             } else {
                 VERBOSE && console.log('user emitted not existing hash pin upsert ' + msgData.hash);
                 hashes.push(msgData.hash);
-                pins[msgData.hash] = new Donor(msgData);
+                pins[msgData.hash] = new Donor(msgData, socket.handshake.address.address);
             }
 
             // push to author

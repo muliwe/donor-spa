@@ -6,6 +6,7 @@ const emptyPin = {
     address: '',
     lat: null,
     long: null,
+    ip: '0.0.0.0',
     deleted: false
 };
 
@@ -18,6 +19,7 @@ const filledPin = {
     bloodGroup: 'A+',
     lat: 1.00,
     long: 2.00,
+    ip: '0.0.0.0',
     deleted: true
 };
 

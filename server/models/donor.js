@@ -3,29 +3,32 @@ class Donor {
     /**
      * Class Constructor
      * @param {Object} data to initiate
+     * @param {String} ip of the client
      * @constructor
      */
-    constructor(data = {}) {
+    constructor(data = {}, ip = '0.0.0.0') {
         // @todo add mongo getter
         this.hash = ''+ data.hash || Math.random().toString();
         // @todo secret hash
-        this._upsert(data);
+        this._upsert(data, ip);
     }
 
     /**
      * Updates Class instance data
      * @param {Object} data to upsert
+     * @param {String} ip of the client
      */
-    update(data = {}) {
-        this._upsert(data);
+    update(data = {}, ip = '0.0.0.0') {
+        this._upsert(data, ip);
     }
 
     /**
      * Updates or cteates Class instance data
      * @param {Object} data to upsert
+     * @param {String} ip of the client
      * @private
      */
-    _upsert(data = {}) {
+    _upsert(data = {}, ip = '0.0.0.0') {
         // @todo add validation here
         this.firstName = data.firstName || '';
         this.lastName = data.lastName || '';
@@ -34,6 +37,7 @@ class Donor {
         this.bloodGroup = data.bloodGroup;
         this.lat = Number(data.lat);
         this.long = Number(data.long);
+        this.ip = ip;
         this.deleted = !!data.deleted || false;
         // @todo add mongo setter
     }
