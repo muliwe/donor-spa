@@ -51,7 +51,7 @@ class Location {
         const filteredArrayHashes = filteredArray.map(el => el.hash);
 
         // find out what is has to be hidden
-        const hashesToHide = (ignoreShown ? Object.keys(dict) : self._showedPins)
+        const hashesToHide = (ignoreShown ? Object.keys(dict) : self._showedPins.slice())
             .filter(hash => !filteredArrayHashes.includes(hash));
 
         // store cloned array
@@ -64,7 +64,17 @@ class Location {
             }
         }
 
-        if (!ignoreShown) {
+        if (ignoreShown) {
+            // may be we just deleted an item
+            filteredArray = filteredArray
+                .concat(hashesToHide.map(hash => (dict[hash].deleted || !dict[hash].firstName ? {
+                    hash,
+                    hide: true
+                } : dict[hash])));
+            // append pins
+            self._showedPins.concat(filteredArray.filter(el => !el.hide)
+                .map(el => el.hash));
+        } else {
             // hide outbound pins from the map
             filteredArray = filteredArray
                 .concat(previouslyShowedPins.filter(hash => !filteredArrayHashes.includes(hash))
@@ -73,19 +83,12 @@ class Location {
                         hide: true
                     }))
                 );
-        } else {
-            // may be we just deleted an item
-            filteredArray = filteredArray
-                .concat(hashesToHide.map(hash => (dict[hash].deleted || !dict[hash].firstName ? {
-                    hash,
-                    hide: true
-                } : dict[hash])));
+            // re-define pins for good
+            self._showedPins = filteredArray.filter(el => !el.hide)
+                .map(el => el.hash);
         }
 
-        // re-define pins for good
-        self._showedPins = filteredArray.filter(el => !el.hide)
-            .map(el => el.hash);
-
+        console.log(self._showedPins, dict, hashesToHide, filteredArray);
         // push only new or hidden
         return filteredArray.filter(el => !previouslyShowedPins.includes(el.hash) || el.hide || ignoreShown);
     }
