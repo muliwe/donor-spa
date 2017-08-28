@@ -13,7 +13,7 @@ class Form extends Component {
       email: '',
       phone: '',
       address: this.props.globals.address || '',
-      bloodType: '',
+      bloodType: '0(I)+',
       formErrors: {
         firstName: '',
         lastName: '',
@@ -63,7 +63,7 @@ class Form extends Component {
           lastName: '',
           email: '',
           phone: '',
-          bloodType: '0(I)+'
+          bloodGroup: '0(I)+'
         });
         this.setState({
           formErrors: {
@@ -71,7 +71,7 @@ class Form extends Component {
             lastName: '',
             email: '',
             phone: '',
-            bloodType: '',
+            bloodGroup: '',
             ok: 'Your Info is erased, but you can join Blood Donation Program later!'
           },
           formValid: false,
@@ -91,7 +91,7 @@ class Form extends Component {
               lastName: '',
               email: '',
               phone: '',
-              bloodType: '0(I)+'
+              bloodGroup: '0(I)+'
           });
           this.setState({
               formErrors: {
@@ -99,7 +99,7 @@ class Form extends Component {
                   lastName: '',
                   email: '',
                   phone: '',
-                  bloodType: '',
+                  bloodGroup: '',
                   ok: 'Please, fill the Form to join Blood Donation Program'
               },
               formValid: false,
@@ -121,7 +121,7 @@ class Form extends Component {
               lastName: '',
               email: '',
               phone: '',
-              bloodType: '',
+              bloodGroup: '',
               ok: 'You data is saved! Secret link to edit or delete your data is in your address bar now'
             },
             formValid: true,
@@ -273,10 +273,10 @@ class Form extends Component {
                  value={this.state.address}
                  onChange={this.handleUserInput}  />
         </div>
-        <div className={`form-group ${Form.errorClass(this.state.formErrors.bloodType)}`}>
-          <label htmlFor="bloodType">Your Blood Group</label>
-          <select required className="form-control" name="bloodType"
-                    value={this.state.bloodType}
+        <div className={`form-group ${Form.errorClass(this.state.formErrors.bloodGroup)}`}>
+          <label htmlFor="bloodGroup">Your Blood Group</label>
+          <select required className="form-control" name="bloodGroup"
+                    value={this.state.bloodGroup}
                     onChange={this.handleUserInput}>
             <option>0(I)+</option>
             <option>0(I)-</option>

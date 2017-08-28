@@ -88,7 +88,6 @@ class Location {
                 .map(el => el.hash);
         }
 
-        console.log(self._showedPins, dict, hashesToHide, filteredArray);
         // push only new or hidden
         return filteredArray.filter(el => !previouslyShowedPins.includes(el.hash) || el.hide || ignoreShown);
     }

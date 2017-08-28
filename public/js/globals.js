@@ -14,8 +14,9 @@ var $globals = function() {
 
 var graphic;
 var selectedPin;
-var pins;
+var pins = [];
 var showPins = function () {};
+var pinInfo = function () {};
 var getPinsForExtent = function () {};
 var extent;
 
@@ -44,7 +45,6 @@ require([
     };
 
     $map.on('load', initFunc);
-    $map.on('extent-change', getPinsForExtent);
 
     var search = new Search({
         map: $map
@@ -109,6 +109,8 @@ require([
         }));
     };
 
+    $map.on('extent-change', getPinsForExtent);
+
     var orientationChanged = function() {
         if ($map) {
             $map.reposition();
@@ -145,9 +147,9 @@ require([
         $map.centerAt(pt);
     }
 
-    function pinInfo(pinHash) {
+    pinInfo = function(pinHash) {
         $socket.emit('get-pin', pinHash);
-    }
+    };
 
     function swapPins(evt) {
         console.log(evt.graphic.attributes);
@@ -288,6 +290,7 @@ function socketHandler() {
     $socket.on('connect_error', onError);
     $socket.on('reconnect_error', onError);
     $socket.on('pin-map-update', onPinMapUpdate);
+    $socket.on('pin-info', onPinInfo);
 
     function onConnect(evt) {
         console.log('CONNECTED');
@@ -313,6 +316,27 @@ function socketHandler() {
 
     function onError(message) {
         console.log('ERROR: ' + message);
+    }
+
+    function onPinInfo(msg) {
+        console.log('Pin info: ', msg);
+
+        var msgData;
+
+        try {
+            msgData = JSON.parse(msg);
+        } catch (error) {
+            console.error(error);
+        }
+
+        var content = '<div><span>Blood Group:</span> <b>' + msgData.bloodGroup + '</b></div>' +
+            '<div><span>Name:</span> <b>' + msgData.firstName + ' ' + msgData.lastName + '</b></div>' +
+            '<div><span>Address:</span> ' + msgData.address + '</div>' +
+            '<div><span>Email:</span> <a href="mailto:' + msgData.email + '"><b>' + msgData.email +
+            '</b></a></div>' +
+            '<div><span>Phone:</span> <b>' + msgData.phone + '</b></div>';
+
+        $map.infoWindow.setContent(msgData.deleted ? 'Sorry! Donor info was deleted' : content);
     }
 
     function onPinMapUpdate(msg) {
@@ -342,7 +366,7 @@ function patchPins(pinsData) {
         for (var i=0; i < pins.length; i++) {
             if (pinsHash[pins[i].hash]) {
                 if (pins[i].graphic) {
-                    this.map.graphics.remove(pins[i].graphic);
+                   $map.graphics.remove(pins[i].graphic);
                 }
 
                 pins[i] = Object.assign({}, pinsHash[pins[i].hash]);
