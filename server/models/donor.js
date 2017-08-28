@@ -8,7 +8,7 @@ class Donor {
      */
     constructor(data = {}, ip = '0.0.0.0') {
         // @todo add mongo getter
-        this.hash = ''+ data.hash || Math.random().toString();
+        this.hash = '' + data.hash || Math.random().toString().substr(2);
         // @todo secret hash
         this._upsert(data, ip);
     }

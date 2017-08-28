@@ -40,7 +40,7 @@ const socketFactory = (io, http) => {
          * Sets client hash
          */
         socket.on('hash', msg => {
-            const hash = '' + (msg || socket.id);
+            const hash = '' + (msg || socket.id + Math.random().toString().substr(2));
 
             if (hashes.includes(hash)) {
                 VERBOSE && console.log('user emitted existing hash ' + hash);

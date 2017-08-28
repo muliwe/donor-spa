@@ -44,10 +44,10 @@ describe('Sockets', function() {
         socketTester.run([client], done);
     });
 
-    it('should receive hash on undefined', function(done){
+    it('should receive proper hash on undefined', function(done){
         const client = {
             on: {
-                'pin-data': helpers.definedProperty('hash')
+                'pin-data': helpers.definedProperty('hash', 36)
             },
             emit: {
                 'hash': undefined
