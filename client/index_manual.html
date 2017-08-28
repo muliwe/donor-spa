@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <meta name="viewport" content="initial-scale=1.0, width=device-width, maximum-scale=1.0, user-scalable=no">
+
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="translucent-black">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Blood Donation</title>
+
+    <link rel="stylesheet" href="https://js.arcgis.com/3.21/esri/css/esri.css">
+
+    <style>
+        html, body {
+            height: 100%;
+            margin: 0px;
+            padding: 0px;
+            width: 100%;
+        }
+
+        #map {
+            width:100%;
+            height:100%;
+        }
+
+        #search {
+            display: block;
+            position: absolute;
+            z-index: 2;
+            top: 20px;
+            left: 74px;
+        }
+
+        #LocateButton {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            z-index: 50;
+        }
+
+        #cart {
+            position: absolute;
+            top: 5%;
+            right: 5%;
+            width: 200px;
+            z-index: 10;
+        }
+
+        #cart > div {
+            border-radius: 10px;
+            background-color: rgba(240, 240, 240, 0.9);
+            margin-bottom : 10px;
+            font-family: Arial;
+            font-weight: 500;
+            font-size: 10pt;
+            color: firebrick;
+            padding: 5px;
+        }
+
+        #cart > div span {
+            line-height: 35px;
+        }
+
+        #cart .red {
+            color: white;
+            background-color: firebrick;
+        }
+
+        .arrow {
+            cursor: pointer;
+        }
+
+        #cart > div > div {
+            border-radius: 5px;
+            padding: 5px;
+        }
+
+        #cart input {
+            width: 90%;
+        }
+
+        #address {
+            width: 90%;
+            height: 132px;
+            resize: none;
+        }
+
+        @-webkit-keyframes
+        pulse
+        {
+            0%
+            {
+                opacity: 1.0;
+
+            }
+            45%
+            {
+                opacity: .20;
+
+            }
+            100%
+            {
+                opacity: 1.0;
+
+            }
+        }
+        @-moz-keyframes
+        pulse
+        {
+            0%
+            {
+                opacity: 1.0;
+            }
+            45%
+            {
+                opacity: .20;
+
+            }
+            100%
+            {
+                opacity: 1.0;
+            }
+        }
+
+        #map_graphics_layer circle[fill-opacity='0.8'] {
+            -webkit-animation-duration: 3s;
+            -webkit-animation-iteration-count: infinite;
+            -webkit-animation-name: pulse;
+            -moz-animation-duration: 3s;
+            -moz-animation-iteration-count: infinite;
+            -moz-animation-name: pulse;
+        }
+
+        #map_graphics_layer circle[fill-opacity='0.9'] {
+            opacity: .50;
+        }
+
+        #map_graphics_layer path {
+            opacity: 0;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.3/socket.io.js"></script>
+
+    <script src="https://js.arcgis.com/3.21compact/"> </script>
+    <script>
+        var map;
+        var graphic;
+        var currLocation;
+        var watchId;
+        var pins = [];
+        var selectedPin;
+        var hash = (window.location.hash ? window.location.hash.substring(1) : undefined);
+        var socket;
+        var extent;
+        var showpins = function () {};
+
+        function submit(toDelete) {
+            var e = document.getElementById('bloodGroup');
+            var bloodGroup = e.options[e.selectedIndex].value;
+
+             socket.emit('pin-data-upsert', JSON.stringify({
+                 hash: hash,
+                 firstName: document.getElementById('firstName').value,
+                 lastName: document.getElementById('lastName').value,
+                 email: document.getElementById('email').value,
+                 phone: document.getElementById('phone').value,
+                 address: document.getElementById('address').value,
+                 bloodGroup: bloodGroup,
+                 lat: graphic.geometry.y,
+                 long: graphic.geometry.x,
+                 deleted: !!toDelete
+             }));
+        }
+
+        function patchPins(pinsData) {
+            if (Array.isArray(pinsData)) {
+                var pinsHash = {};
+
+                pinsData.forEach(function(pin) {
+                    pinsHash[pin.hash] = pin;
+                });
+
+                for (var i=0; i < pins.length; i++) {
+                   if (pinsHash[pins[i].hash]) {
+                       if (pins[i].graphic) {
+                           this.map.graphics.remove(pins[i].graphic);
+                       }
+
+                       pins[i] = Object.assign({}, pinsHash[pins[i].hash]);
+                   }
+
+                   delete pinsHash[pins[i].hash];
+                }
+
+                Object.keys(pinsHash).forEach(function(hash) {
+                    pins.push(pinsHash[hash]);
+                });
+            }
+        }
+
+        function pinInfo(pinHash) {
+            socket.emit('get-pin', pinHash);
+        }
+
+        function socketHandler() {
+            socket = io('http://localhost:3000/');
+
+            socket.on('connect', onConnect);
+            socket.on('disconnect', onDisconnect);
+            socket.on('connect_error', onError);
+            socket.on('reconnect_error', onError);
+
+            socket.on('pin-info', onPinInfo);
+            socket.on('pin-map-update', onPinMapUpdate);
+            socket.on('pin-data', onPinData);
+
+            function onConnect(evt) {
+                console.log('CONNECTED');
+
+                socket.emit('hash', hash);
+
+                if (extent) {
+                    console.log(extent);
+                    socket.emit('location', JSON.stringify({
+                        fromLat: extent[0][1],
+                        fromLong: extent[0][0],
+                        toLat: extent[1][1],
+                        toLong: extent[1][0]
+                    }));
+                    extent = undefined;
+                }
+
+                if (extent) {
+                    getPinsForExtent(map);
+                }
+            }
+
+            function onDisconnect(evt) {
+                console.log('DISCONNECTED');
+            }
+
+            function onError(message) {
+                console.log('ERROR: ' + message);
+            }
+
+            function onPinInfo(msg) {
+                console.log('Pin info: ', msg);
+
+                var msgData;
+
+                try {
+                    msgData = JSON.parse(msg);
+                } catch (error) {
+                    console.error(error);
+                }
+
+                var content = '<div><span>Blood Group:</span> <b>' + msgData.bloodGroup + '</b></div>' +
+                        '<div><span>Name:</span> <b>' + msgData.firstName + ' ' + msgData.lastName + '</b></div>' +
+                        '<div><span>Address:</span> ' + msgData.address + '</div>' +
+                        '<div><span>Email:</span> <a href="mailto:' + msgData.email + '"><b>' + msgData.email +
+                        '</b></a></div>' +
+                        '<div><span>Phone:</span> <b>' + msgData.phone + '</b></div>';
+
+                map.infoWindow.setContent(msgData.deleted ? 'Sorry! Donor info was deleted' : content);
+            }
+
+            function onPinMapUpdate(msg) {
+                console.log('Pin map update: ', msg);
+
+                var msgData;
+
+                try {
+                    msgData = JSON.parse(msg);
+                } catch (error) {
+                    console.error(error);
+                }
+
+                patchPins(msgData);
+                showPins();
+            }
+
+            function onPinData(msg) {
+                console.log('Pin data: ', msg);
+                var msgData;
+
+                try {
+                    msgData = JSON.parse(msg);
+                } catch (error) {
+                    console.error(error);
+                }
+
+                hash = msgData.hash;
+
+                location.replace('/#' + hash);
+
+                if (msgData.deleted) {
+                    document.getElementById('firstName').value = '';
+                    document.getElementById('lastName').value = '';
+                    document.getElementById('phone').value = '';
+                    document.getElementById('result').innerHTML = '';
+                } else {
+                    document.getElementById('firstName').value = msgData.firstName;
+                    document.getElementById('lastName').value = msgData.lastName;
+                    document.getElementById('phone').value = msgData.phone;
+                    document.getElementById('address').value = msgData.address;
+                    document.getElementById('bloodGroup').value = msgData.bloodGroup;
+                    document.getElementById('result').innerHTML =
+                            'You data is saved! Secret link to edit or delete your data is in your address bar now';
+                }
+            }
+        }
+
+        require([
+            "esri/map", "esri/geometry/Point", "esri/symbols/TextSymbol", "esri/symbols/Font", "esri/tasks/locator",
+            "esri/symbols/SimpleMarkerSymbol", "esri/symbols/SimpleLineSymbol", "esri/geometry/webMercatorUtils",
+            "esri/graphic", "esri/Color", "esri/InfoTemplate", "esri/dijit/Search", "esri/dijit/LocateButton",
+            "dojo/domReady!"
+        ], function(
+                Map, Point, TextSymbol, Font, Locator,
+                SimpleMarkerSymbol, SimpleLineSymbol, webMercatorUtils,
+                Graphic, Color, InfoTemplate, Search, LocateButton
+        ) {
+            map = new Map("map", {
+                basemap: "streets",
+                center: [-122.144, 37.468],
+                zoom: 8
+            });
+            map.on("load", initFunc);
+            map.on("extent-change", getPinsForExtent);
+
+            var search = new Search({
+                map: map
+            }, "search");
+            search.startup();
+
+            var geoLocate = new LocateButton({
+                map: map
+            }, "LocateButton");
+            geoLocate.startup();
+
+            var infoTemplate = new InfoTemplate('Blood Donor', 'Blood Group: <b>${bloodGroup}</b><br>' +
+                    '<a onclick="pinInfo(\'${hash}\'); return false;" href="#"">Click for more info</a>');
+
+            var locator = new Locator("https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer");
+
+            map.on("click", function (evt) {
+                if (evt.graphic) {
+                    swapPins(evt);
+                } else {
+                    console.log(evt.mapPoint.getLatitude(), evt.mapPoint.getLongitude());
+                    showLocation({
+                        coords: {
+                            latitude: evt.mapPoint.getLatitude(),
+                            longitude: evt.mapPoint.getLongitude()
+                        }
+                    });
+                    locator.locationToAddress(webMercatorUtils.webMercatorToGeographic(evt.mapPoint), 100);
+                }
+            });
+
+            locator.on("location-to-address-complete", function(evt) {
+                if (evt.address.address) {
+                    var address = evt.address.address.LongLabel;
+                    document.getElementById('address').value = address;
+                }
+            });
+
+            function getPinsForExtent(extent) {
+                var min = webMercatorUtils.xyToLngLat(extent.extent.xmin.toFixed(3),
+                        extent.extent.ymin.toFixed(3), true);
+                var max = webMercatorUtils.xyToLngLat(extent.extent.xmax.toFixed(3),
+                        extent.extent.ymax.toFixed(3), true);
+
+                if (!socket || !socket.connected) {
+                    extent = [min, max];
+                    return;
+                }
+
+                socket.emit('location', JSON.stringify({
+                    fromLat: min[1],
+                    fromLong: min[0],
+                    toLat: max[1],
+                    toLong: max[0]
+                }));
+            }
+
+            function orientationChanged() {
+                if (map){
+                    map.reposition();
+                    map.resize();
+                }
+            }
+
+            function initFunc(map) {
+                socketHandler();
+
+                if( navigator.geolocation ) {
+                    navigator.geolocation.getCurrentPosition(zoomToLocation, locationError);
+                    // disable tracking for a while
+                    // watchId = navigator.geolocation.watchPosition(showLocation, locationError);
+                } else {
+                    console.log('Browser doesn\'t support Geolocation.');
+                }
+            }
+
+            function locationError(error) {
+                //error occurred so stop watchPosition
+                if( navigator.geolocation ) {
+                    navigator.geolocation.clearWatch(watchId);
+                }
+                switch (error.code) {
+                    case error.PERMISSION_DENIED:
+                        console.log('Location not provided');
+                        break;
+
+                    case error.POSITION_UNAVAILABLE:
+                        console.log('Current location not available');
+                        break;
+
+                    case error.TIMEOUT:
+                        console.log('Timeout');
+                        break;
+
+                    default:
+                        console.log('unknown error');
+                        break;
+                }
+            }
+
+            function swapPins(evt) {
+                console.log(evt.graphic.attributes);
+
+                if (selectedPin && evt.graphic.attributes && !evt.graphic.attributes.selected) {
+                    map.infoWindow.hide();
+
+                    // switch selected
+                    var pin = evt.graphic.attributes;
+                    var pin2 = selectedPin.attributes;
+
+                    var symbol = symbolGenerator();
+                    var graphic = new Graphic(new Point(pin2.long, pin2.lat), symbol);
+                    pin2.graphic = graphic;
+                    pin2.showed = true;
+                    pin2.selected = false;
+                    graphic.setAttributes(pin2);
+
+                    var selectedSymbol = symbolGenerator(true);
+                    var graphic2 = new Graphic(new Point(pin.long, pin.lat), selectedSymbol);
+                    pin.graphic = graphic;
+                    pin.showed = true;
+                    pin.selected = true;
+                    graphic2.setAttributes(pin);
+
+                    map.graphics.remove(evt.graphic);
+                    map.graphics.remove(selectedPin);
+
+                    map.graphics.add(graphic);
+                    map.graphics.add(graphic2);
+
+                    selectedPin = graphic2;
+
+                    map.infoWindow.setContent('Blood Group: <b>' + selectedPin.attributes.bloodGroup + '</b><br>' +
+                            '<a onclick="pinInfo(\'' + selectedPin.attributes.hash + '\'); return false;" href="#">' +
+                            'Click for more info</a>');
+                    map.infoWindow.show(new Point(pin.long, pin.lat), selectedSymbol);
+
+                } else if (!selectedPin) {
+                    // mark selected
+                    var pin = evt.graphic.attributes;
+
+                    var selectedSymbol = symbolGenerator(true);
+                    var graphic = new Graphic(new Point(pin.long, pin.lat), selectedSymbol);
+                    pin.graphic = graphic;
+                    pin.showed = true;
+                    pin.selected = true;
+                    graphic.setAttributes(pin);
+
+                    map.graphics.remove(evt.graphic);
+                    map.graphics.remove(selectedPin);
+
+                    map.graphics.add(graphic);
+
+                    selectedPin = graphic;
+                }
+                console.log(selectedPin.attributes);
+            }
+
+            function zoomToLocation(location) {
+                console.log(location.coords.longitude, location.coords.latitude);
+                currLocation = location.coords.longitude + location.coords.latitude;
+
+                var pt = new Point(location.coords.longitude, location.coords.latitude);
+                addGraphic(pt);
+                map.centerAndZoom(pt, 12);
+                getPinsForExtent(map);
+            }
+
+            function showLocation(location) {
+                var newLocation = location.coords.longitude + location.coords.latitude;
+
+                if (newLocation === currLocation) {
+                    return;
+                }
+
+                currLocation = newLocation;
+
+                //zoom to the users location and add a graphic
+                var pt = new Point(location.coords.longitude, location.coords.latitude);
+                if ( !graphic ) {
+                    addGraphic(pt);
+                } else { // move the graphic if it already exists
+                    graphic.setGeometry(pt);
+                }
+                map.centerAt(pt);
+            }
+
+            function addGraphic(pt){
+                var symbol = new SimpleMarkerSymbol(
+                        SimpleMarkerSymbol.STYLE_CIRCLE,
+                        12,
+                        new SimpleLineSymbol(
+                                SimpleLineSymbol.STYLE_SOLID,
+                                new Color([210, 105, 30, 0.5]),
+                                8
+                        ),
+                        new Color([210, 105, 30, 0.8])
+                );
+                graphic = new Graphic(pt, symbol);
+                map.graphics.add(graphic);
+                locator.locationToAddress(pt, 100);
+            }
+
+            showPins = function() {
+                pins.filter(function(pin) {
+                    return !pin.hide && !pin.showed && !pin.graphic;
+                }).forEach(function(pin) {
+                    var symbol = symbolGenerator();
+                    var graphic = new Graphic(new Point(pin.long, pin.lat), symbol, {}, infoTemplate);
+
+                    pin.graphic = graphic;
+                    pin.showed = true;
+                    pin.selected = false;
+                    graphic.setAttributes(pin);
+
+                    map.graphics.add(graphic);
+                });
+            };
+
+            function symbolGenerator(isSelected) {
+                return new SimpleMarkerSymbol(
+                        SimpleMarkerSymbol.STYLE_CIRCLE,
+                        24,
+                        new SimpleLineSymbol(
+                                SimpleLineSymbol.STYLE_SOLID,
+                                new Color([210, 0, 0, 0.9]),
+                                4
+                        ),
+                        new Color([isSelected ? 255 : 210, 0, 0, isSelected ? 1 : 0.9])
+                )
+            }
+        });
+    </script>
+</head>
+
+<body onorientationchange="orientationChanged();">
+<div id="search"></div>
+<div id="map">
+    <div id="LocateButton"></div>
+</div>
+<div id="cart">
+    <div id="donate">
+        <div class="red">For the Donors</div>
+        <div id="donate-form">
+            <span>First Name</span> <input id="firstName" type="text" placeholder="">
+            <span>Last Name</span> <input id="lastName" type="text" placeholder="">
+            <span>Email</span> <input id="email" type="email" placeholder="email@domain.tld">
+            <span>Phone</span> <input id="phone" type="text" placeholder="+15550000000">
+            <span>Address</span> <textarea id="address"></textarea>
+            <span>Blood Type</span>
+            <select id="bloodGroup">
+                <option>0</option>
+                <option>A</option>
+                <option>B</option>
+                <option>AB</option>
+            </select>
+        </div>
+        <div class="red arrow" onclick="submit();">Submit</div>
+        <div id="result"></div>
+        <div class="red arrow" onclick="submit(true);">Delete</div>
+
+    </div>
+</div>div>
+</body>
+
+</html>

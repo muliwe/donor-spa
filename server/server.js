@@ -10,11 +10,11 @@ const socket = require('./socket')(io, http);
 // run socket event listener
 io.on('connection', socket);
 
-app.use('/static', express.static(path.join(__dirname, '../client')));
-
 app.get('/', function(req, res) {
     res.sendFile(path.join(__dirname, '../client/index.html'));
 });
+
+app.use('/', express.static(path.join(__dirname, '../client')));
 
 // run server
 http.listen(setup.PORT, () => {
