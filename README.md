@@ -12,7 +12,7 @@ MongoDb 3.*
 
 `mongod --dbpath path_to_any_local_dir` in separate console
 
-`mongo` then `use donors` -> shold not raise errors 
+`mongo` then `use donors` -> should not raise errors 
 
 ## Tests
 
