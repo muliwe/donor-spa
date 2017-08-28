@@ -19,6 +19,7 @@ var showPins = function () {};
 var pinInfo = function () {};
 var getPinsForExtent = function () {};
 var extent;
+var currLocation;
 
 require([
     'esri/map', 'esri/geometry/Point', 'esri/symbols/TextSymbol', 'esri/symbols/Font', 'esri/tasks/locator',
@@ -258,7 +259,7 @@ require([
     function locationError(error) {
         // error occurred so stop watchPosition
         if (navigator.geolocation) {
-            navigator.geolocation.clearWatch(watchId);
+            // navigator.geolocation.clearWatch(watchId);
         }
         switch (error.code) {
             case error.PERMISSION_DENIED:
