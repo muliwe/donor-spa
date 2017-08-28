@@ -76,10 +76,10 @@ class Location {
         } else {
             // may be we just deleted an item
             filteredArray = filteredArray
-                .concat(hashesToHide.map(hash => ({
+                .concat(hashesToHide.map(hash => (dict[hash].deleted || !dict[hash].firstName ? {
                     hash,
                     hide: true
-                })));
+                } : dict[hash])));
         }
 
         // re-define pins for good
