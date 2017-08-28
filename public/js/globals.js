@@ -93,8 +93,6 @@ require([
         var max = webMercatorUtils.xyToLngLat(map.extent.xmax.toFixed(3),
             map.extent.ymax.toFixed(3), true);
 
-        console.log(min, max);
-
         if (!$socket || !$socket.connected) {
             extent = [min, max];
             return;
@@ -283,7 +281,7 @@ require([
 });
 
 function socketHandler() {
-    $socket = io('http://localhost:3001/');
+    $socket = io('/');
 
     $socket.on('connect', onConnect);
     $socket.on('disconnect', onDisconnect);
