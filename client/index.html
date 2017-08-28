@@ -163,6 +163,7 @@
                  hash: hash,
                  firstName: document.getElementById('firstName').value,
                  lastName: document.getElementById('lastName').value,
+                 email: document.getElementById('email').value,
                  phone: document.getElementById('phone').value,
                  address: document.getElementById('address').value,
                  bloodGroup: bloodGroup,
@@ -257,6 +258,8 @@
                 var content = '<div><span>Blood Group:</span> <b>' + msgData.bloodGroup + '</b></div>' +
                         '<div><span>Name:</span> <b>' + msgData.firstName + ' ' + msgData.lastName + '</b></div>' +
                         '<div><span>Address:</span> ' + msgData.address + '</div>' +
+                        '<div><span>Email:</span> <a href="mailto:' + msgData.email + '"><b>' + msgData.email +
+                        '</b></a></div>';
                         '<div><span>Phone:</span> <b>' + msgData.phone + '</b></div>';
 
                 map.infoWindow.setContent(msgData.deleted ? 'Sorry! Donor info was deleted' : content);

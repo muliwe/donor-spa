@@ -32,6 +32,7 @@ class Donor {
         // @todo add validation here
         this.firstName = data.firstName || '';
         this.lastName = data.lastName || '';
+        this.email = data.email || '';
         this.phone = data.phone || '';
         this.address = data.address || '';
         this.bloodGroup = data.bloodGroup;
