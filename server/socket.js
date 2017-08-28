@@ -15,6 +15,8 @@ const socketFactory = (io, http) => {
     const locations = {};
     const connected = {};
 
+    Donor.getFromMongo(pins);
+
     return socket => {
         VERBOSE && console.log(`user ${socket.id} connected`);
         connected[socket.id] = true;

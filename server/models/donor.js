@@ -1,3 +1,5 @@
+const DonorMongo = require('../mongo/donor');
+
 /** Donor Class */
 class Donor {
     /**
@@ -58,9 +60,34 @@ class Donor {
         this.long = Number(data.long);
         this.ip = ip;
         this.deleted = !!data.deleted || false;
-        // @todo add mongo setter
+
+        if (!data.fromMongo) {
+            var donor = new DonorMongo(this);
+            console.log(donor);
+            donor.save();
+        }
 
         return err;
+    }
+
+    /**
+     * Loads data from mongodb
+     * @param {Object} pins to fill
+     * @static
+     */
+    static getFromMongo(pins) {
+        DonorMongo.find({}).exec(function(err, donors) {
+            if (err) {
+                console.log(err);
+                return;
+            }
+
+            donors.forEach(donor => {
+                donor.fromMongo = true;
+                console.log(donor);
+                pins[donor.hash] = new Donor(donor);
+            });
+        });
     }
 
     /**
