@@ -59,3 +59,7 @@ typings/
 
 # IntelliJ WebStorm
 .idea
+
+# mongo
+
+mongo
