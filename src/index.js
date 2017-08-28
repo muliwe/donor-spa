@@ -5,6 +5,10 @@ import './index.css';
 import 'bootstrap/dist/css/bootstrap.css';
 import 'bootstrap/dist/css/bootstrap-theme.css';
 
+var $globals;
+
+setTimeout(() => {console.log($globals().map.methods)}, 10000);
+
 ReactDOM.render(
   <App />,
   document.getElementById('root')
