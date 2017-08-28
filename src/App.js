@@ -7,7 +7,7 @@ class App extends Component {
     super(props);
 
     this.state = {
-      showed: true
+      showed: false
     };
 
     this.toggle = this.toggle.bind(this);
