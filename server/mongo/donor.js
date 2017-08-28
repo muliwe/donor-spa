@@ -10,6 +10,7 @@ const donorSchema = new Schema({
     address: {type: String, default: '', trim: true},
     lat: {type: Number, default: 0},
     long: {type: Number, default: 0},
+    bloodGroup: {type: String, default: '0(I)+', trim: true},
     ip: {type: String, default: '0.0.0.0', trim: true},
     deleted: {type: Boolean, default: false}
 });

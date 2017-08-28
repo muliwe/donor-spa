@@ -61,6 +61,7 @@ class Donor {
         this.ip = ip;
         this.deleted = !!data.deleted || false;
 
+        // prevent extra saving
         if (!data.fromMongo) {
             var donor = new DonorMongo(this);
             console.log(donor);
