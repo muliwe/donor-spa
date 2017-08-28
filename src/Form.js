@@ -7,12 +7,12 @@ class Form extends Component {
     super(props);
 
     this.state = {
-      hash: this.props.donor.hash,
+      hash: this.props.globals.hash,
       firstName: '',
       lastName: '',
       email: '',
       phone: '',
-      address: this.props.donor.address || '',
+      address: this.props.globals.address || '',
       bloodType: '',
       formErrors: {
         firstName: '',
@@ -20,7 +20,7 @@ class Form extends Component {
         email: '',
         phone: '',
         bloodType: '',
-        ok: 'Fill the Form to register in Blood Donation program'
+        ok: 'Please, fill the Form to join Blood Donation Program'
       },
       valid: {
         firstName: false,
@@ -32,7 +32,143 @@ class Form extends Component {
       formSaved: false
     };
 
+    this.props.globals.setAddress = address => {
+        this.setState({
+            address: address
+        });
+    };
+
+    this.props.globals.socket.on('pin-data', msg => {
+      console.log('Pin data: ', msg);
+
+      var msgData;
+
+      try {
+          msgData = JSON.parse(msg);
+      } catch (error) {
+          console.error(error);
+      }
+
+      this.props.globals.hash = msgData.hash;
+
+      location.replace('/#' + msgData.hash);
+
+       this.setState({
+          hash: msgData.hash
+        });
+
+      if (msgData.deleted) {
+        this.setState({
+          firstName: '',
+          lastName: '',
+          email: '',
+          phone: '',
+          bloodType: '0(I)+'
+        });
+        this.setState({
+          formErrors: {
+            firstName: '',
+            lastName: '',
+            email: '',
+            phone: '',
+            bloodType: '',
+            ok: 'Your Info is erased, but you can join Blood Donation Program later!'
+          },
+          formValid: false,
+          formSaved: false
+        });
+        this.setState({
+          valid: {
+            firstName: false,
+            lastName: false,
+            email: false,
+            phone: false
+          }
+        });
+      } else if (!msgData.firstName) {
+          this.setState({
+              firstName: '',
+              lastName: '',
+              email: '',
+              phone: '',
+              bloodType: '0(I)+'
+          });
+          this.setState({
+              formErrors: {
+                  firstName: '',
+                  lastName: '',
+                  email: '',
+                  phone: '',
+                  bloodType: '',
+                  ok: 'Please, fill the Form to join Blood Donation Program'
+              },
+              formValid: false,
+              formSaved: false
+          });
+          this.setState({
+            valid: {
+              firstName: false,
+              lastName: false,
+              email: false,
+              phone: false
+            }
+          });
+      } else {
+        this.setState(msgData);
+        this.setState({
+          formErrors: {
+            firstName: '',
+              lastName: '',
+              email: '',
+              phone: '',
+              bloodType: '',
+              ok: 'You data is saved! Secret link to edit or delete your data is in your address bar now'
+            },
+            formValid: true,
+            formSaved: true
+          });
+          this.setState({
+            valid: {
+              firstName: true,
+              lastName: true,
+              email: true,
+              phone: true
+            }
+          });
+      }
+    });
+
     this.handleUserInput = this.handleUserInput.bind(this);
+    this._submit = this._submit.bind(this);
+    this.submitData = this.submitData.bind(this);
+    this.deleteData = this.deleteData.bind(this);
+  }
+
+  _submit(toDelete) {
+      this.props.globals.socket.emit('pin-data-upsert', JSON.stringify({
+          hash: this.state.hash,
+          firstName: this.state.firstName,
+          lastName: this.state.lastName,
+          email: this.state.email,
+          phone: this.state.phone,
+          address: this.state.address,
+          bloodGroup: this.state.bloodGroup,
+          lat: this.props.globals.map.methods.graphic.geometry.y,
+          long: this.props.globals.map.methods.graphic.geometry.x,
+          deleted: !!toDelete
+      }));
+
+      console.log('emitted data save');
+  }
+
+  submitData(e) {
+    e.preventDefault();
+    this._submit();
+  }
+
+  deleteData(e) {
+    e.preventDefault();
+    this._submit(true);
   }
 
   handleUserInput(e) {
@@ -91,14 +227,13 @@ class Form extends Component {
   }
 
   validateForm() {
-    console.log(this.state.valid, Object.keys(this.state.valid).every(el => !!this.state.valid[el]));
     this.setState({
       formValid: Object.keys(this.state.valid).every(el => !!this.state.valid[el])
     });
   }
 
   static errorClass(error) {
-    return(error.length === 0 ? '' : 'has-error');
+    return (error && error.length === 0 ? '' : 'has-error');
   }
 
   render () {
@@ -156,8 +291,10 @@ class Form extends Component {
         <div className="panel panel-default">
           <FormErrors formErrors={this.state.formErrors} okStateText={this.state.okStateText}/>
         </div>
-        {this.state.formValid ? <button type="submit" className="btn btn-primary">Save</button> : null}
-        {this.state.formSaved ? <button type="submit" className="btn btn-danger">Delete</button> : null}
+        {this.state.formValid ? <button type="submit" className="btn btn-primary"
+                                        onClick={this.submitData}>Save</button> : null}
+        {this.state.formSaved ? <button type="submit" className="btn btn-danger"
+                                        onClick={this.deleteData}>Delete</button> : null}
       </form>
     )
   }

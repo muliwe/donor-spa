@@ -13,6 +13,11 @@ var $globals = function() {
 };
 
 var graphic;
+var selectedPin;
+var pins;
+var showPins = function () {};
+var getPinsForExtent = function () {};
+var extent;
 
 require([
     'esri/map', 'esri/geometry/Point', 'esri/symbols/TextSymbol', 'esri/symbols/Font', 'esri/tasks/locator',
@@ -34,12 +39,12 @@ require([
         Map: Map, Point: Point, TextSymbol: TextSymbol, Font: Font, Locator: Locator,
         SimpleMarkerSymbol: SimpleMarkerSymbol, SimpleLineSymbol: SimpleLineSymbol, webMercatorUtils: webMercatorUtils,
         Graphic: Graphic, Color: Color, InfoTemplate: InfoTemplate, Search: Search, LocateButton: LocateButton,
-        getPinsForExtent: function() {}, // to define later
         locator: new Locator('https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer'),
         graphic: graphic
     };
 
     $map.on('load', initFunc);
+    $map.on('extent-change', getPinsForExtent);
 
     var search = new Search({
         map: $map
@@ -52,7 +57,7 @@ require([
     geoLocate.startup();
 
     function initFunc(map) {
-        _globals.map = map;
+        _globals.map = map.map;
 
         window.addEventListener('orientationchange', orientationChanged);
 
@@ -63,7 +68,46 @@ require([
         } else {
             console.log('Browser doesn\'t support Geolocation.');
         }
+
+        map.map.on('click', function (evt) {
+            if (evt.graphic) {
+                swapPins(evt);
+            } else {
+                console.log(evt.mapPoint.getLatitude(), evt.mapPoint.getLongitude());
+                showLocation({
+                    coords: {
+                        latitude: evt.mapPoint.getLatitude(),
+                        longitude: evt.mapPoint.getLongitude()
+                    }
+                });
+                $map.methods.locator.locationToAddress(webMercatorUtils.webMercatorToGeographic(evt.mapPoint), 100);
+            }
+        });
+
+        getPinsForExtent($map);
     }
+
+    getPinsForExtent = function(map) {
+        var min = webMercatorUtils.xyToLngLat(map.extent.xmin.toFixed(3),
+            map.extent.ymin.toFixed(3), true);
+        var max = webMercatorUtils.xyToLngLat(map.extent.xmax.toFixed(3),
+            map.extent.ymax.toFixed(3), true);
+
+        console.log(min, max);
+
+        if (!$socket || !$socket.connected) {
+            extent = [min, max];
+            return;
+        }
+
+        // request pin data for extent
+        $socket.emit('location', JSON.stringify({
+            fromLat: min[1],
+            fromLong: min[0],
+            toLat: max[1],
+            toLong: max[0]
+        }));
+    };
 
     var orientationChanged = function() {
         if ($map) {
@@ -79,7 +123,7 @@ require([
         var pt = new Point(location.coords.longitude, location.coords.latitude);
         addGraphic(pt);
         $map.centerAndZoom(pt, 12);
-        $map.methods.getPinsForExtent();
+        getPinsForExtent($map);
     }
 
     function showLocation(location) {
@@ -99,6 +143,99 @@ require([
             graphic.setGeometry(pt);
         }
         $map.centerAt(pt);
+    }
+
+    function pinInfo(pinHash) {
+        $socket.emit('get-pin', pinHash);
+    }
+
+    function swapPins(evt) {
+        console.log(evt.graphic.attributes);
+
+        if (selectedPin && evt.graphic.attributes && !evt.graphic.attributes.selected) {
+            $map.infoWindow.hide();
+
+            // switch selected
+            var pin = evt.graphic.attributes;
+            var pin2 = selectedPin.attributes;
+
+            var symbol = symbolGenerator();
+            var graphic = new Graphic(new Point(pin2.long, pin2.lat), symbol);
+            pin2.graphic = graphic;
+            pin2.showed = true;
+            pin2.selected = false;
+            graphic.setAttributes(pin2);
+
+            var selectedSymbol = symbolGenerator(true);
+            var graphic2 = new Graphic(new Point(pin.long, pin.lat), selectedSymbol);
+            pin.graphic = graphic;
+            pin.showed = true;
+            pin.selected = true;
+            graphic2.setAttributes(pin);
+
+            $map.graphics.remove(evt.graphic);
+            $map.graphics.remove(selectedPin);
+
+            $map.graphics.add(graphic);
+            $map.graphics.add(graphic2);
+
+            selectedPin = graphic2;
+
+            $map.infoWindow.setContent('Blood Group: <b>' + selectedPin.attributes.bloodGroup + '</b><br>' +
+                '<a onclick="pinInfo(\'' + selectedPin.attributes.hash + '\'); return false;" href="#">' +
+                'Click for more info</a>');
+            $map.infoWindow.show(new Point(pin.long, pin.lat), selectedSymbol);
+
+        } else if (!selectedPin) {
+            // mark selected
+            var pin = evt.graphic.attributes;
+
+            var selectedSymbol = symbolGenerator(true);
+            var graphic = new Graphic(new Point(pin.long, pin.lat), selectedSymbol);
+            pin.graphic = graphic;
+            pin.showed = true;
+            pin.selected = true;
+            graphic.setAttributes(pin);
+
+            $map.graphics.remove(evt.graphic);
+            $map.graphics.remove(selectedPin);
+
+            $map.graphics.add(graphic);
+
+            selectedPin = graphic;
+        }
+        console.log(selectedPin.attributes);
+    }
+
+    showPins = function() {
+        pins.filter(function(pin) {
+            return !pin.hide && !pin.showed && !pin.graphic;
+        }).forEach(function(pin) {
+            var symbol = symbolGenerator();
+            var infoTemplate = new InfoTemplate('Blood Donor', 'Blood Group: <b>${bloodGroup}</b><br>' +
+                '<a onclick="pinInfo(\'${hash}\'); return false;" href="#"">Click for more info</a>');
+            var graphic = new Graphic(new Point(pin.long, pin.lat), symbol, {}, infoTemplate);
+
+            pin.graphic = graphic;
+            pin.showed = true;
+            pin.selected = false;
+            graphic.setAttributes(pin);
+
+            $map.graphics.add(graphic);
+        });
+    };
+
+    function symbolGenerator(isSelected) {
+        return new SimpleMarkerSymbol(
+            SimpleMarkerSymbol.STYLE_CIRCLE,
+            24,
+            new SimpleLineSymbol(
+                SimpleLineSymbol.STYLE_SOLID,
+                new Color([210, 0, 0, 0.9]),
+                4
+            ),
+            new Color([isSelected ? 255 : 210, 0, 0, isSelected ? 1 : 0.9])
+        )
     }
 
     function addGraphic(pt){
@@ -150,11 +287,24 @@ function socketHandler() {
     $socket.on('disconnect', onDisconnect);
     $socket.on('connect_error', onError);
     $socket.on('reconnect_error', onError);
+    $socket.on('pin-map-update', onPinMapUpdate);
 
     function onConnect(evt) {
         console.log('CONNECTED');
 
         _globals.socket = $socket;
+
+        // perform hanged actions
+        if (extent) {
+            $socket.emit('location', JSON.stringify({
+                fromLat: extent[0][1],
+                fromLong: extent[0][0],
+                toLat: extent[1][1],
+                toLong: extent[1][0]
+            }));
+            getPinsForExtent($map);
+            extent = undefined;
+        }
     }
 
     function onDisconnect(evt) {
@@ -163,5 +313,46 @@ function socketHandler() {
 
     function onError(message) {
         console.log('ERROR: ' + message);
+    }
+
+    function onPinMapUpdate(msg) {
+        console.log('Pin map update: ', msg);
+
+        var msgData;
+
+        try {
+            msgData = JSON.parse(msg);
+        } catch (error) {
+            console.error(error);
+        }
+
+        patchPins(msgData);
+        showPins();
+    }
+}
+
+function patchPins(pinsData) {
+    if (Array.isArray(pinsData)) {
+        var pinsHash = {};
+
+        pinsData.forEach(function(pin) {
+            pinsHash[pin.hash] = pin;
+        });
+
+        for (var i=0; i < pins.length; i++) {
+            if (pinsHash[pins[i].hash]) {
+                if (pins[i].graphic) {
+                    this.map.graphics.remove(pins[i].graphic);
+                }
+
+                pins[i] = Object.assign({}, pinsHash[pins[i].hash]);
+            }
+
+            delete pinsHash[pins[i].hash];
+        }
+
+        Object.keys(pinsHash).forEach(function(hash) {
+            pins.push(pinsHash[hash]);
+        });
     }
 }

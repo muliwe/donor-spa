@@ -13,3 +13,8 @@
 .demoForm p {
 	margin: 5px;
 }
+
+.demoForm textarea {
+    resize: none;
+    font-size: 10px;
+}

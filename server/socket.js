@@ -1,7 +1,7 @@
 const Donor = require('./models/donor');
 const Location = require('./models/location');
 
-const VERBOSE = false;
+const VERBOSE = true;
 
 /**
  * A Factory for Socket event listener

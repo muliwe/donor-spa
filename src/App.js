@@ -14,9 +14,21 @@ class App extends Component {
 
     this.globals = {
         hash: props.globals.hash,
-        address: 'address',
-        socket: props.globals.socket
+        address: '',
+        setAddress: () => {},
+        socket: props.globals.socket,
+        map: props.globals.map
     };
+
+    // broadcast your hash now to get info
+    this.globals.socket.emit('hash', props.globals.hash);
+
+    // set actual address to form
+    props.globals.map.methods.locator.on('location-to-address-complete', evt => {
+      if (evt.address.address) {
+          this.globals.setAddress(evt.address.address.LongLabel);
+      }
+    });
   }
 
   toggle() {
