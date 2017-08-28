@@ -259,7 +259,7 @@
                         '<div><span>Name:</span> <b>' + msgData.firstName + ' ' + msgData.lastName + '</b></div>' +
                         '<div><span>Address:</span> ' + msgData.address + '</div>' +
                         '<div><span>Email:</span> <a href="mailto:' + msgData.email + '"><b>' + msgData.email +
-                        '</b></a></div>';
+                        '</b></a></div>' +
                         '<div><span>Phone:</span> <b>' + msgData.phone + '</b></div>';
 
                 map.infoWindow.setContent(msgData.deleted ? 'Sorry! Donor info was deleted' : content);
@@ -574,6 +574,7 @@
         <div id="donate-form">
             <span>First Name</span> <input id="firstName" type="text" placeholder="">
             <span>Last Name</span> <input id="lastName" type="text" placeholder="">
+            <span>Email</span> <input id="email" type="email" placeholder="email@domain.tld">
             <span>Phone</span> <input id="phone" type="text" placeholder="+15550000000">
             <span>Address</span> <textarea id="address"></textarea>
             <span>Blood Type</span>
