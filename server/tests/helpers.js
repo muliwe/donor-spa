@@ -18,5 +18,12 @@ module.exports = {
 
             assert.equal(actualData.length, length);
         }
+    },
+    isDeleted: function() {
+        return function (actual) {
+            const actualData = JSON.parse(actual);
+
+            assert.equal(actualData.deleted, true);
+        }
     }
 };

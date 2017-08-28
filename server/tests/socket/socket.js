@@ -31,10 +31,10 @@ describe('Sockets', function() {
     const location = Object.assign({}, testData.location);
     const location2 = Object.assign({}, testData.location2);
 
-    it('should receive same hash in response data', function(done){
+    it('should receive deleted in response of empty data', function(done){
         const client = {
             on: {
-                'pin-data': socketTester.shouldBeCalledWith(JSON.stringify(emptyData))
+                'pin-data': helpers.isDeleted()
             },
             emit: {
                 'hash': HASH
@@ -90,6 +90,19 @@ describe('Sockets', function() {
         };
 
         socketTester.run([client1, client2], done);
+    });
+
+    it('should receive error on wrong pin data', function(done){
+        const client = {
+            on: {
+                'pin-data-error': socketTester.shouldBeCalledWith(JSON.stringify({error: 'Email is invalid'}))
+            },
+            emit: {
+                'pin-data-upsert': JSON.stringify(testData.invalidData)
+            }
+        };
+
+        socketTester.run([client], done);
     });
 
     it('should receive empty pin array after location is set', function(done){

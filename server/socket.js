@@ -102,7 +102,11 @@ const socketFactory = (io, http) => {
                 VERBOSE && console.log('user emitted existing hash pin upsert ' + msgData.hash);
 
                 if (pins.hasOwnProperty(msgData.hash)) {
-                    pins[msgData.hash].update(msgData, socket.handshake.address.address);
+                    let err = pins[msgData.hash].update(msgData, socket.handshake.address.address);
+                    if (err) {
+                        emit('pin-data-error', {error: err});
+                        return;
+                    }
                 } else {
                     VERBOSE && console.log(`Inconsistent hash ${msgData.hash}`);
                 }

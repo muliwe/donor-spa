@@ -25,6 +25,20 @@ const filledPin = {
     deleted: true
 };
 
+const invalidData = {
+    hash: '12345',
+    firstName: 'John',
+    lastName: 'Doe',
+    email: 'test@@test.com',
+    phone: '+12 345 6789 012',
+    address: 'address',
+    bloodGroup: 'A(II)+',
+    lat: 1.00,
+    long: 2.00,
+    ip: '0.0.0.0',
+    deleted: true
+};
+
 const location = {
     fromLat: 0.00,
     fromLong: 0.00,
@@ -42,6 +56,7 @@ const location2 = {
 module.exports = {
     emptyPin,
     filledPin,
+    invalidData,
     location,
     location2
 };
