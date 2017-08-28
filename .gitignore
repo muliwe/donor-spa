@@ -62,4 +62,4 @@ typings/
 
 # mongo
 
-mongo
+/mongo
