@@ -2,12 +2,14 @@ var $hash = (window.location.hash ? window.location.hash.substring(1) : null);
 var $map;
 var $socket;
 
+var _globals = {
+    hash: $hash,
+    map: $map,
+    socket: $socket
+};
+
 var $globals = function() {
-    return {
-        hash: $hash,
-        map: $map,
-        socket: $socket
-    };
+    return _globals;
 };
 
 require([
@@ -20,7 +22,6 @@ require([
     SimpleMarkerSymbol, SimpleLineSymbol, webMercatorUtils,
     Graphic, Color, InfoTemplate, Search, LocateButton
 ) {
-    console.log(document.getElementById('map'));
     $map = new Map('map', {
         basemap: 'streets',
         center: [-122.144, 37.468],
@@ -30,7 +31,9 @@ require([
     $map.methods = {
         Map: Map, Point: Point, TextSymbol: TextSymbol, Font: Font, Locator: Locator,
         SimpleMarkerSymbol: SimpleMarkerSymbol, SimpleLineSymbol: SimpleLineSymbol, webMercatorUtils: webMercatorUtils,
-        Graphic: Graphic, Color: Color, InfoTemplate: InfoTemplate, Search: Search, LocateButton: LocateButton
+        Graphic: Graphic, Color: Color, InfoTemplate: InfoTemplate, Search: Search, LocateButton: LocateButton,
+        getPinsForExtent: function() {}, // to define later
+        locator: new Locator('https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer')
     };
 
     $map.on('load', initFunc);
@@ -45,9 +48,9 @@ require([
     }, 'LocateButton');
     geoLocate.startup();
 
-    var locator = new Locator("https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer");
-
     function initFunc(map) {
+        _globals.map = map;
+
         window.addEventListener('orientationchange', orientationChanged);
 
         socketHandler();
@@ -73,7 +76,7 @@ require([
         var pt = new Point(location.coords.longitude, location.coords.latitude);
         addGraphic(pt);
         $map.centerAndZoom(pt, 12);
-        getPinsForExtent(map);
+        $map.methods.getPinsForExtent();
     }
 
     function showLocation(location) {
@@ -108,7 +111,23 @@ require([
         );
         graphic = new Graphic(pt, symbol);
         $map.graphics.add(graphic);
-        locator.locationToAddress(pt, 100);
+        $map.methods.locator.locationToAddress(pt, 100);
+    }
+
+    function addGraphic(pt){
+        var symbol = new SimpleMarkerSymbol(
+            SimpleMarkerSymbol.STYLE_CIRCLE,
+            12,
+            new SimpleLineSymbol(
+                SimpleLineSymbol.STYLE_SOLID,
+                new Color([210, 105, 30, 0.5]),
+                8
+            ),
+            new Color([210, 105, 30, 0.8])
+        );
+        graphic = new Graphic(pt, symbol);
+        $map.graphics.add(graphic);
+        $map.methods.locator.locationToAddress(pt, 100);
     }
 
     function locationError(error) {
@@ -147,13 +166,7 @@ function socketHandler() {
     function onConnect(evt) {
         console.log('CONNECTED');
 
-        $globals = function() {
-            return {
-                hash: $hash,
-                map: $map,
-                socket: $socket
-            };
-        };
+        _globals.socket = $socket;
     }
 
     function onDisconnect(evt) {
