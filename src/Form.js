@@ -5,6 +5,7 @@ import './Form.css';
 class Form extends Component {
   constructor (props) {
     super(props);
+
     this.state = {
       firstName: '',
       lastName: '',
@@ -26,30 +27,32 @@ class Form extends Component {
         lastName: false,
         email: false,
         phone: false,
-        address: false,
-        bloodType: false
+        address: false
       },
       formValid: false,
       formSaved: false
-    }
+    };
+
+    this.handleUserInput = this.handleUserInput.bind(this);
   }
 
-  handleUserInput = (e) => {
+  handleUserInput(e) {
     const name = e.target.name;
     let value = e.target.value;
 
-    value = this.fieldFormat(name, value);
+    value = Form.fieldFormat(name, value);
 
-    this.setState({[name]: value},
-                  () => { this.validateField(name, value) });
-  };
+    this.setState({[name]: value}, () => {
+      this.validateField(name, value)
+    });
+  }
 
-  fieldFormat(fieldName, value) {
+  static fieldFormat(fieldName, value) {
     let formattedValue = '' + value;
     switch(fieldName) {
       case 'phone':
-        formattedValue = formattedValue.replace(/[\s()]/g, '');
-        formattedValue = formattedValue.replace(/^(\+|00)(\d\d)(\d{3})(\d{4})(\d{3})/, '$1$2 $3 $4 $5');
+        formattedValue = formattedValue.replace(/[\s()-]/g, '');
+        formattedValue = formattedValue.replace(/^(\+|00)(\d\d*)(\d{3})(\d{4})(\d{3})/, '$1$2 $3 $4 $5');
         break;
       default:
         formattedValue = formattedValue.replace(/^\s+/g, '');
@@ -73,12 +76,16 @@ class Form extends Component {
         fieldValidationErrors[fieldName] = valid[fieldName] ? '': 'Last Name is required';
         break;
       case 'email':
-        valid[fieldName] = value.match(/^([\w.%+-]+)@([\w-]+\.)+([\w]{2,})$/i);
+        valid[fieldName] = !!value.match(/^([\w.%+-]+)@([\w-]+\.)+([\w]{2,})$/i);
         fieldValidationErrors[fieldName] = valid[fieldName] ? '': 'Email is invalid';
         break;
       case 'phone':
-        valid[fieldName] = value.match(/(\+|00)(\d\d) (\d{3}) (\d{4}) (\d{3})$/i);
+        valid[fieldName] = !!value.match(/(\+|00)(\d\d*) (\d{3}) (\d{4}) (\d{3})$/i);
         fieldValidationErrors[fieldName] = valid[fieldName] ? '': 'Phone is invalid';
+        break;
+      case 'address':
+        valid[fieldName] = value.length >= 5;
+        fieldValidationErrors[fieldName] = valid[fieldName] ? '': 'Address is required';
         break;
       default:
         break;
@@ -89,53 +96,54 @@ class Form extends Component {
   }
 
   validateForm() {
+    console.log(this.state.valid, Object.keys(this.state.valid).every(el => !!this.state.valid[el]));
     this.setState({
       formValid: Object.keys(this.state.valid).every(el => !!this.state.valid[el])
     });
   }
 
-  errorClass(error) {
+  static errorClass(error) {
     return(error.length === 0 ? '' : 'has-error');
   }
 
   render () {
     return (
       <form className="demoForm">
-        <div className={`form-group ${this.errorClass(this.state.formErrors.firstName)}`}>
+        <div className={`form-group ${Form.errorClass(this.state.formErrors.firstName)}`}>
           <label htmlFor="firstName">First Name</label>
           <input type="text" required className="form-control" name="firstName"
                  placeholder="John"
                  value={this.state.firstName}
                  onChange={this.handleUserInput}  />
         </div>
-        <div className={`form-group ${this.errorClass(this.state.formErrors.lastName)}`}>
+        <div className={`form-group ${Form.errorClass(this.state.formErrors.lastName)}`}>
           <label htmlFor="lastName">Last Name</label>
           <input type="text" required className="form-control" name="lastName"
                  placeholder="Doe"
                  value={this.state.lastName}
                  onChange={this.handleUserInput}  />
         </div>
-        <div className={`form-group ${this.errorClass(this.state.formErrors.email)}`}>
+        <div className={`form-group ${Form.errorClass(this.state.formErrors.email)}`}>
           <label htmlFor="email">Email</label>
           <input type="email" required className="form-control" name="email"
             placeholder="email@domain.tld"
             value={this.state.email}
             onChange={this.handleUserInput}  />
         </div>
-        <div className={`form-group ${this.errorClass(this.state.formErrors.phone)}`}>
+        <div className={`form-group ${Form.errorClass(this.state.formErrors.phone)}`}>
           <label htmlFor="phone">Contact phone</label>
           <input type="text" required className="form-control" name="phone"
                  placeholder="+12 345 6789 012"
                  value={this.state.phone}
                  onChange={this.handleUserInput}  />
         </div>
-        <div className={`form-group ${this.errorClass(this.state.formErrors.address)}`}>
+        <div className={`form-group ${Form.errorClass(this.state.formErrors.address)}`}>
           <label htmlFor="address">Address</label>
           <textarea required className="form-control" name="address"
                  value={this.state.address}
                  onChange={this.handleUserInput}  />
         </div>
-        <div className={`form-group ${this.errorClass(this.state.formErrors.bloodType)}`}>
+        <div className={`form-group ${Form.errorClass(this.state.formErrors.bloodType)}`}>
           <label htmlFor="bloodType">Your Blood Group</label>
           <select required className="form-control" name="bloodType"
                     value={this.state.bloodType}

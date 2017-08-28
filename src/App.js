@@ -8,12 +8,14 @@ class App extends Component {
 
     this.state = {
       showed: true
-    }
+    };
+
+    this.toggle = this.toggle.bind(this);
   }
 
-  toggle = () => {
-    this.setState({showed: !this.state.showed});
-  };
+  toggle() {
+      this.setState({showed: !this.state.showed});
+  }
 
   render() {
     return (
