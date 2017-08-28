@@ -38,6 +38,46 @@ class Form extends Component {
         });
     };
 
+    this.props.globals.socket.on('pin-data-error', msg => {
+        console.log('Pin data error: ', msg);
+
+        var msgData;
+
+        try {
+            msgData = JSON.parse(msg);
+        } catch (error) {
+            console.error(error);
+        }
+
+        this.setState({
+            firstName: '',
+            lastName: '',
+            email: '',
+            phone: '',
+            bloodGroup: '0(I)+'
+        });
+        this.setState({
+            formErrors: {
+                firstName: '',
+                lastName: '',
+                email: '',
+                phone: '',
+                bloodGroup: '',
+                ok: 'Error: ' + msgData.error
+            },
+            formValid: false,
+            formSaved: false
+        });
+        this.setState({
+            valid: {
+                firstName: false,
+                lastName: false,
+                email: false,
+                phone: false
+            }
+        });
+    });
+
     this.props.globals.socket.on('pin-data', msg => {
       console.log('Pin data: ', msg);
 
@@ -57,7 +97,7 @@ class Form extends Component {
           hash: msgData.hash
         });
 
-      if (msgData.deleted) {
+      if (msgData.deleted && msgData.firstName) {
         this.setState({
           firstName: '',
           lastName: '',

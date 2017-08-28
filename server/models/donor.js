@@ -31,7 +31,7 @@ class Donor {
      * @private
      */
     _upsert(data = {}, ip = '0.0.0.0') {
-        const err = this.validate(data);
+        const err = Donor.validate(data);
 
         if (err) {
             this.firstName = '';
@@ -67,8 +67,9 @@ class Donor {
      * Checks if instance data
      * @param {Object} data to check
      * @returns {String} if is not valid
+     * @static
      */
-    validate(data) {
+    static validate(data) {
         if ((data.firstName + '').length < 1) {
             return 'First Name is required';
         }
