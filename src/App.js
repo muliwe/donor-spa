@@ -11,6 +11,12 @@ class App extends Component {
     };
 
     this.toggle = this.toggle.bind(this);
+
+    this.globals = {
+        hash: props.globals.hash,
+        address: 'address',
+        socket: props.globals.socket
+    };
   }
 
   toggle() {
@@ -23,7 +29,7 @@ class App extends Component {
         <div className="App-header" onClick={this.toggle}>
           <h4>For Donors</h4>
         </div>
-        <div className={this.state.showed ? '': 'hidden'}><Form /></div>
+        <div className={this.state.showed ? '': 'hidden'}><Form globals={this.globals}/></div>
       </div>
     );
   }

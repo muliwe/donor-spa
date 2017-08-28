@@ -12,6 +12,8 @@ var $globals = function() {
     return _globals;
 };
 
+var graphic;
+
 require([
     'esri/map', 'esri/geometry/Point', 'esri/symbols/TextSymbol', 'esri/symbols/Font', 'esri/tasks/locator',
     'esri/symbols/SimpleMarkerSymbol', 'esri/symbols/SimpleLineSymbol', 'esri/geometry/webMercatorUtils',
@@ -33,7 +35,8 @@ require([
         SimpleMarkerSymbol: SimpleMarkerSymbol, SimpleLineSymbol: SimpleLineSymbol, webMercatorUtils: webMercatorUtils,
         Graphic: Graphic, Color: Color, InfoTemplate: InfoTemplate, Search: Search, LocateButton: LocateButton,
         getPinsForExtent: function() {}, // to define later
-        locator: new Locator('https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer')
+        locator: new Locator('https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer'),
+        graphic: graphic
     };
 
     $map.on('load', initFunc);
@@ -110,22 +113,7 @@ require([
             new Color([210, 105, 30, 0.8])
         );
         graphic = new Graphic(pt, symbol);
-        $map.graphics.add(graphic);
-        $map.methods.locator.locationToAddress(pt, 100);
-    }
-
-    function addGraphic(pt){
-        var symbol = new SimpleMarkerSymbol(
-            SimpleMarkerSymbol.STYLE_CIRCLE,
-            12,
-            new SimpleLineSymbol(
-                SimpleLineSymbol.STYLE_SOLID,
-                new Color([210, 105, 30, 0.5]),
-                8
-            ),
-            new Color([210, 105, 30, 0.8])
-        );
-        graphic = new Graphic(pt, symbol);
+        $map.methods.graphic = graphic;
         $map.graphics.add(graphic);
         $map.methods.locator.locationToAddress(pt, 100);
     }

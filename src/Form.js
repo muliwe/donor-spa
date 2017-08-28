@@ -7,18 +7,18 @@ class Form extends Component {
     super(props);
 
     this.state = {
+      hash: this.props.donor.hash,
       firstName: '',
       lastName: '',
       email: '',
       phone: '',
-      address: '',
+      address: this.props.donor.address || '',
       bloodType: '',
       formErrors: {
         firstName: '',
         lastName: '',
         email: '',
         phone: '',
-        address: '',
         bloodType: '',
         ok: 'Fill the Form to register in Blood Donation program'
       },
@@ -26,8 +26,7 @@ class Form extends Component {
         firstName: false,
         lastName: false,
         email: false,
-        phone: false,
-        address: false
+        phone: false
       },
       formValid: false,
       formSaved: false
@@ -82,10 +81,6 @@ class Form extends Component {
       case 'phone':
         valid[fieldName] = !!value.match(/(\+|00)(\d\d*) (\d{3}) (\d{4}) (\d{3})$/i);
         fieldValidationErrors[fieldName] = valid[fieldName] ? '': 'Phone is invalid';
-        break;
-      case 'address':
-        valid[fieldName] = value.length >= 5;
-        fieldValidationErrors[fieldName] = valid[fieldName] ? '': 'Address is required';
         break;
       default:
         break;
