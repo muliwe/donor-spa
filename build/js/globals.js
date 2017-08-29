@@ -16,6 +16,7 @@ var graphic;
 var selectedPin;
 var pins = [];
 var showPins = function () {};
+var patchPins = function () {};
 var pinInfo = function () {};
 var getPinsForExtent = function () {};
 var extent;
@@ -151,8 +152,6 @@ require([
     };
 
     function swapPins(evt) {
-        console.log(evt.graphic.attributes);
-
         if (selectedPin && evt.graphic.attributes && !evt.graphic.attributes.selected) {
             $map.infoWindow.hide();
 
@@ -169,7 +168,7 @@ require([
 
             var selectedSymbol = symbolGenerator(true);
             var graphic2 = new Graphic(new Point(pin.long, pin.lat), selectedSymbol);
-            pin.graphic = graphic;
+            pin.graphic = graphic2;
             pin.showed = true;
             pin.selected = true;
             graphic2.setAttributes(pin);
@@ -199,31 +198,58 @@ require([
             graphic.setAttributes(pin);
 
             $map.graphics.remove(evt.graphic);
-            $map.graphics.remove(selectedPin);
-
             $map.graphics.add(graphic);
 
             selectedPin = graphic;
         }
-        console.log(selectedPin.attributes);
     }
 
-    showPins = function() {
-        pins.filter(function(pin) {
-            return !pin.hide && !pin.showed && !pin.graphic;
-        }).forEach(function(pin) {
-            var symbol = symbolGenerator();
-            var infoTemplate = new InfoTemplate('Blood Donor', 'Blood Group: <b>${bloodGroup}</b><br>' +
-                '<a onclick="pinInfo(\'${hash}\'); return false;" href="#"">Click for more info</a>');
-            var graphic = new Graphic(new Point(pin.long, pin.lat), symbol, {}, infoTemplate);
+    patchPins = function(pinsData) {
+      if (Array.isArray(pinsData)) {
+        var pinsHash = {};
 
-            pin.graphic = graphic;
-            pin.showed = true;
-            pin.selected = false;
-            graphic.setAttributes(pin);
-
-            $map.graphics.add(graphic);
+        pinsData.forEach(function(pin) {
+          pinsHash[pin.hash] = pin;
         });
+
+        // update or remove existing
+        for (var i=0; i < pins.length; i++) {
+          if (pinsHash[pins[i].hash]) {
+            if (pins[i].graphic) {
+              $map.graphics.remove(pins[i].graphic);
+              delete pins[i].graphic;
+              pins[i].showed = false;
+            }
+
+            pins[i] = Object.assign({}, pinsHash[pins[i].hash]);
+            delete pinsHash[pins[i].hash];
+          }
+        }
+
+        // add new ones
+        Object.keys(pinsHash).forEach(function(hash) {
+          pins.push(pinsHash[hash]);
+        });
+      }
+    };
+
+    showPins = function() {
+      var infoTemplate = new InfoTemplate('Blood Donor', 'Blood Group: <b>${bloodGroup}</b><br>' +
+        '<a onclick="pinInfo(\'${hash}\'); return false;" href="#"">Click for more info</a>');
+
+      pins.filter(function(pin) {
+          return !pin.hide && !pin.showed && !pin.graphic;
+      }).forEach(function(pin) {
+          var symbol = symbolGenerator();
+          var graphic = new Graphic(new Point(pin.long, pin.lat), symbol, {}, infoTemplate);
+
+          pin.graphic = graphic;
+          pin.showed = true;
+          pin.selected = false;
+          graphic.setAttributes(pin);
+
+          $map.graphics.add(graphic);
+      });
     };
 
     function symbolGenerator(isSelected) {
@@ -351,31 +377,5 @@ function socketHandler() {
 
         patchPins(msgData);
         showPins();
-    }
-}
-
-function patchPins(pinsData) {
-    if (Array.isArray(pinsData)) {
-        var pinsHash = {};
-
-        pinsData.forEach(function(pin) {
-            pinsHash[pin.hash] = pin;
-        });
-
-        for (var i=0; i < pins.length; i++) {
-            if (pinsHash[pins[i].hash]) {
-                if (pins[i].graphic) {
-                   $map.graphics.remove(pins[i].graphic);
-                }
-
-                pins[i] = Object.assign({}, pinsHash[pins[i].hash]);
-            }
-
-            delete pinsHash[pins[i].hash];
-        }
-
-        Object.keys(pinsHash).forEach(function(hash) {
-            pins.push(pinsHash[hash]);
-        });
     }
 }
