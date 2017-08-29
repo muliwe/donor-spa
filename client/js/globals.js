@@ -152,8 +152,6 @@ require([
     };
 
     function swapPins(evt) {
-        console.log(evt.graphic.attributes);
-
         if (selectedPin && evt.graphic.attributes && !evt.graphic.attributes.selected) {
             $map.infoWindow.hide();
 
@@ -170,7 +168,7 @@ require([
 
             var selectedSymbol = symbolGenerator(true);
             var graphic2 = new Graphic(new Point(pin.long, pin.lat), selectedSymbol);
-            pin.graphic = graphic;
+            pin.graphic = graphic2;
             pin.showed = true;
             pin.selected = true;
             graphic2.setAttributes(pin);
@@ -200,13 +198,10 @@ require([
             graphic.setAttributes(pin);
 
             $map.graphics.remove(evt.graphic);
-            $map.graphics.remove(selectedPin);
-
             $map.graphics.add(graphic);
 
             selectedPin = graphic;
         }
-        console.log(selectedPin.attributes);
     }
 
     patchPins = function(pinsData) {
