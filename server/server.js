@@ -13,7 +13,7 @@ const setup = require('./setup');
 io.on('connection', socket);
 
 // connect to mongo
-mongoose.connect(db.url);
+mongoose.connect(db.url, {useMongoClient: true});
 
 // default url
 app.get('/', function(req, res) {

@@ -1,4 +1,5 @@
-const DonorMongo = require('../mongo/donor');
+const isTestEnv = process.env.NODE_ENV === 'test';
+const DonorMongo = isTestEnv ? require('../tests/mocks/donor') : require('../mongo/donor');
 
 /** Donor Class */
 class Donor {
@@ -9,9 +10,7 @@ class Donor {
      * @constructor
      */
     constructor(data = {}, ip = '0.0.0.0') {
-        // @todo add mongo getter
         this.hash = '' + data.hash || Math.random().toString().substr(2);
-        // @todo secret hash
         this._upsert(data, ip);
     }
 
@@ -64,7 +63,6 @@ class Donor {
         // prevent extra saving
         if (!data.fromMongo) {
             var donor = new DonorMongo(this);
-            console.log(donor);
             donor.save();
         }
 
@@ -77,7 +75,7 @@ class Donor {
      * @static
      */
     static getFromMongo(pins) {
-        DonorMongo.find({}).exec(function(err, donors) {
+        DonorMongo.find({}).exec((err, donors) => {
             if (err) {
                 console.log(err);
                 return;
