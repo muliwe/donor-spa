@@ -16,11 +16,27 @@ MongoDb 3.*
 
 ## Tests
 
-`npm test` to install socket.io tests
+`npm test` to run socket.io tests
+
+#### For Windows:
+
+`set NODE_ENV=test`
+
+`mocha server/tests/socket/ --reporter spec`
 
 ## Run app
 
 `PORT=3030 node .`
+
+#### For Windows:
+
+`set NODE_ENV=dev`
+
+`set PORT=3030`
+
+`node .`
+
+#### Then: 
 
 Open `http://localhost:3030/`
 
