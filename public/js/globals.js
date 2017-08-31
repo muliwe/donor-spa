@@ -39,9 +39,6 @@ require([
     });
 
     $map.methods = {
-        Map: Map, Point: Point, TextSymbol: TextSymbol, Font: Font, Locator: Locator,
-        SimpleMarkerSymbol: SimpleMarkerSymbol, SimpleLineSymbol: SimpleLineSymbol, webMercatorUtils: webMercatorUtils,
-        Graphic: Graphic, Color: Color, InfoTemplate: InfoTemplate, Search: Search, LocateButton: LocateButton,
         locator: new Locator('https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer'),
         graphic: graphic
     };
